@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Снято">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<title>Снято</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Climate+Crisis&family=Russo+One&family=Commissioner:wght@700&family=Hachi+Maru+Pop&family=Stick&family=Delta+Gothic+One&family=Yuji+Boku&family=Seymour+One&family=Rubik+Scribble&family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#ff3b30;--green:#34c759;--orange:#ff9500;
+  --yellow:#ffcc00;--brown:#a0522d;--blue:#007aff;
+  --text:#1c1c1e;--muted:#8e8e93;
+  --safe-top:env(safe-area-inset-top,44px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%}
+body{
+  font-family:'Raleway',-apple-system,sans-serif;
+  background:#0a0a0a;color:#fff;
+  -webkit-font-smoothing:antialiased;
+  min-height:100%;
+}
+
+/* ── DESKTOP WRAPPER ── */
+.desktop-wrap{
+  width:100%;min-height:100vh;
+  display:flex;align-items:flex-start;justify-content:center;
+  background:#0a0a0a;
+}
+/* On wide screens show phone frame */
+@media(min-width:600px){
+  body{overflow:auto;position:static}
+  .desktop-wrap{
+    padding:40px 20px 60px;
+    background:radial-gradient(ellipse at 60% 20%, rgba(255,59,48,.08) 0%, transparent 60%), #0a0a0a;
+    min-height:100vh;align-items:center;
+  }
+  .app-frame{
+    width:390px;
+    min-height:844px;
+    border-radius:44px;
+    overflow:hidden;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 40px 120px rgba(0,0,0,.8), 0 0 60px rgba(255,59,48,.06);
+    position:relative;
+    flex-shrink:0;
+  }
+  .bg-layer{position:absolute!important;border-radius:44px;overflow:hidden;}
+  .app{border-radius:44px;}
+  .panel,.sheet,.confirm{position:absolute!important;}
+  .fab,.btn-today,.day-add-btn{position:absolute!important;}
+}
+@media(max-width:599px){
+  body{overflow:hidden;position:fixed;width:100%;height:100%}
+  .app-frame{width:100%;height:100%;position:relative;}
+  .bg-layer{position:fixed;}
+}
+
+/* ── BACKGROUND ── */
+.bg-layer{inset:0;z-index:0;background:#0a0a0a}
+.bg-img{
+  position:absolute;inset:0;
+  background-size:cover;background-position:center;
+  filter:grayscale(100%);
+  opacity:0;transition:opacity .8s ease;
+}
+.bg-img.visible{opacity:1}
+.bg-overlay{position:absolute;inset:0;background:rgba(0,0,0,.60);}
+
+/* ── APP SHELL ── */
+.app{display:flex;flex-direction:column;height:100%;min-height:844px;position:relative;z-index:1}
+.statusbar-pad{height:var(--safe-top);flex-shrink:0}
+@media(min-width:600px){.statusbar-pad{height:20px}}
+
+/* ── TOPBAR ── */
+.topbar{
+  padding:8px 16px 10px;flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.35);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+}
+.app-row{display:flex;align-items:center;margin-bottom:10px;height:36px}
+.app-name{
+  font-size:22px;font-weight:800;color:#fff;
+  letter-spacing:.08em;text-transform:uppercase;
+  transition:opacity .22s ease;
+  white-space:nowrap;overflow:hidden;
+  height:36px;line-height:36px;
+}
+.app-name.fading{opacity:0}
+.tabs{display:flex;background:rgba(255,255,255,.1);border-radius:9px;padding:2px;gap:1px}
+.tab{
+  flex:1;padding:7px 4px;border:none;background:transparent;
+  color:rgba(255,255,255,.45);
+  font-family:'Raleway',sans-serif;font-size:12px;font-weight:700;
+  border-radius:7px;cursor:pointer;transition:all .2s;letter-spacing:.03em;
+}
+.tab.active{background:rgba(255,255,255,.15);color:#fff}
+.tab-badge{
+  display:inline-block;width:7px;height:7px;background:var(--red);
+  border-radius:50%;margin-left:4px;vertical-align:middle;
+}
+
+/* ── STATUS STRIP ── */
+.status-strip{
+  display:flex;gap:7px;padding:10px 14px 4px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;flex-shrink:0;
+}
+.status-strip::-webkit-scrollbar{display:none}
+.status-pill{
+  flex-shrink:0;background:var(--red);color:#fff;
+  padding:6px 12px;border-radius:20px;
+  font-size:12px;font-weight:700;white-space:nowrap;
+  letter-spacing:.02em;
+}
+.status-pill.neutral{background:rgba(255,255,255,.12);color:rgba(255,255,255,.7)}
+
+/* ── SCROLL ── */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(88px + var(--safe-bottom))}
+.section{display:none}.section.active{display:block}
+
+/* ── FAB ── */
+.fab{
+  position:fixed;bottom:calc(24px + var(--safe-bottom));right:20px;
+  width:52px;height:52px;background:var(--red);border:none;
+  border-radius:16px;color:#fff;font-size:30px;font-weight:300;
+  cursor:pointer;display:none;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(255,59,48,.5);z-index:40;
+  transition:transform .15s;line-height:1;
+}
+.fab:active{transform:scale(.91)}
+.day-add-btn{
+  position:fixed;
+  bottom:calc(24px + var(--safe-bottom));
+  right:20px;
+  transform:translateY(100px);
+  width:52px;height:52px;background:var(--red);border:none;
+  border-radius:16px;color:#fff;font-size:32px;font-weight:300;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  z-index:41;box-shadow:0 4px 20px rgba(255,59,48,.55);line-height:1;
+  opacity:0;pointer-events:none;
+  transition:transform .28s cubic-bezier(.32,1.2,.5,1),opacity .2s ease;
+}
+.day-add-btn.show{transform:translateY(0);opacity:1;pointer-events:all}
+.day-add-btn:active{transform:scale(.91)}
+
+/* On desktop — constrain to frame */
+@media(min-width:600px){
+  .fab{position:absolute}
+  .day-add-btn{position:absolute}
+  .btn-today{position:absolute}
+}
+
+/* ── TODAY BUTTON ── */
+.btn-today{
+  position:fixed;bottom:calc(88px + var(--safe-bottom));left:50%;
+  transform:translateX(-50%) translateY(16px);
+  background:rgba(255,59,48,.92);
+  border:none;color:#fff;padding:9px 20px;border-radius:20px;
+  font-family:'Raleway',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;z-index:39;
+  opacity:0;pointer-events:none;
+  transition:opacity .28s,transform .28s;
+  white-space:nowrap;box-shadow:0 4px 16px rgba(255,59,48,.45);
+}
+.btn-today.show{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0)}
+
+/* ── MORNING POPUP ── */
+.morning-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  opacity:0;pointer-events:none;transition:opacity .3s;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.morning-overlay.open{opacity:1;pointer-events:all}
+@media(min-width:600px){.morning-overlay{position:absolute}}
+.morning-box{
+  background:#1a1a1a;border:1px solid rgba(255,255,255,.12);
+  border-radius:24px;padding:28px 24px;width:100%;max-width:340px;
+}
+.morning-date{font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.morning-title{font-size:22px;font-weight:800;color:#fff;margin-bottom:16px;line-height:1.3}
+.morning-items{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.morning-item{
+  background:rgba(255,255,255,.07);border-radius:12px;padding:12px 14px;
+  border-left:3px solid var(--red);
+}
+.morning-item.warn{border-left-color:var(--orange)}
+.morning-item.ok{border-left-color:var(--green)}
+.morning-item-title{font-size:13px;font-weight:700;color:#fff}
+.morning-item-sub{font-size:12px;color:rgba(255,255,255,.45);margin-top:2px}
+.btn-morning-close{
+  background:var(--red);border:none;color:#fff;width:100%;
+  padding:14px;border-radius:13px;
+  font-family:'Raleway',sans-serif;font-size:15px;font-weight:800;cursor:pointer;
+}
+
+/* ── CALENDAR ── */
+.cal-outer{padding:10px 14px 0}
+.cal-wrap{
+  background:rgba(255,255,255,.84);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-radius:20px;overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.28),0 1px 0 rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.22);
+}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
+.cal-month-txt{font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--text)}
+.cal-nav-btns{display:flex;gap:6px}
+.cal-nbtn{
+  background:rgba(0,0,0,.07);border:none;color:var(--text);
+  width:32px;height:32px;border-radius:10px;font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.cal-wdays{display:grid;grid-template-columns:repeat(7,1fr);padding:0 12px;gap:3px;margin-bottom:2px}
+.cal-wd{text-align:center;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;padding:4px 0}
+.cal-grid-wrap{overflow:hidden;position:relative;min-height:10px}
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  padding:0 12px 14px;gap:3px;
+  transition:transform .32s cubic-bezier(.4,0,.2,1),opacity .32s ease;
+}
+.cal-grid.out-left{transform:translateX(-110%);opacity:0}
+.cal-grid.out-right{transform:translateX(110%);opacity:0}
+.cal-grid.in-left{transform:translateX(110%);opacity:0;transition:none}
+.cal-grid.in-right{transform:translateX(-110%);opacity:0;transition:none}
+.cal-grid.settled{transform:translateX(0);opacity:1}
+.cal-cell{
+  aspect-ratio:1;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:500;cursor:pointer;
+  border:2px solid transparent;transition:all .1s;
+  color:var(--text);background:transparent;user-select:none;
+  font-family:'Raleway',sans-serif;
+}
+.cal-cell.empty{cursor:default;background:transparent!important;border:none!important}
+.cal-cell.today{background:var(--red)!important;color:#fff!important;font-weight:800;border-color:transparent!important}
+.cal-cell.stage-new{background:var(--orange)!important;color:#fff!important;font-weight:700;border-color:transparent!important}
+.cal-cell.stage-montage{background:#c9a800!important;color:#fff!important;font-weight:700;border-color:transparent!important}
+.cal-cell.stage-approve{background:var(--green)!important;color:#fff!important;font-weight:700;border-color:transparent!important}
+.cal-cell.deadline-day{background:var(--brown)!important;color:#fff!important;border-color:transparent!important}
+.cal-cell.deadline-day-done{background:var(--green)!important;color:#fff!important;border-color:transparent!important}
+.cal-cell.range-new{border-color:var(--orange)!important}
+.cal-cell.range-montage{border-color:var(--yellow)!important}
+.cal-cell.range-approve{border-color:var(--green)!important}
+.day-tip{
+  position:absolute;background:rgba(10,10,10,.92);color:#fff;
+  border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600;
+  z-index:500;pointer-events:none;max-width:220px;line-height:1.5;
+  backdrop-filter:blur(10px);box-shadow:0 4px 20px rgba(0,0,0,.4);
+}
+.day-tip.hidden{display:none}
+
+/* ── EV SECTION GROUPED ── */
+.ev-section{padding:0 14px 16px}
+.ev-group-label{
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.45);padding:14px 0 7px 2px;
+}
+.ev-card{
+  background:rgba(255,255,255,.84);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-radius:16px;padding:14px;margin-bottom:8px;
+  border:1px solid rgba(255,255,255,.3);
+  box-shadow:0 2px 12px rgba(0,0,0,.18);
+  cursor:grab;user-select:none;
+}
+.ev-card.dragging{opacity:.5;cursor:grabbing}
+.ev-card-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.ev-stage-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.ev-card-info{flex:1;min-width:0}
+.ev-card-name{font-size:15px;font-weight:800;letter-spacing:-.2px;color:var(--text)}
+.ev-card-meta{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.ev-card-deadline{font-size:12px;margin-top:2px;font-weight:600}
+.ev-card-btns{display:flex;gap:7px;align-items:center}
+.btn-stage{
+  flex:1;padding:9px 7px;border-radius:11px;border:none;
+  font-family:'Raleway',sans-serif;font-size:12px;font-weight:700;
+  cursor:pointer;text-align:center;line-height:1.2;transition:all .15s;
+}
+.btn-back-stage{
+  background:rgba(0,0,0,.09);color:var(--text);border:none;
+  width:36px;height:36px;border-radius:11px;font-size:15px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.btn-edit-ev{
+  background:rgba(0,0,0,.07);color:var(--text);border:none;
+  width:36px;height:36px;border-radius:11px;font-size:15px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.btn-del-ev{
+  background:rgba(255,59,48,.1);color:var(--red);border:none;
+  width:36px;height:36px;border-radius:11px;font-size:18px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+
+/* ── IN-WORK PANEL ── */
+.inwork-trigger{
+  display:flex;align-items:center;gap:10px;
+  margin:10px 14px 0;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;padding:12px 16px;cursor:pointer;
+  transition:background .12s;
+}
+.inwork-trigger:active{background:rgba(255,255,255,.12)}
+.inwork-trigger-txt{flex:1;font-size:14px;font-weight:700;color:#fff}
+.inwork-trigger-badge{
+  background:var(--red);color:#fff;
+  font-size:11px;font-weight:800;
+  padding:3px 8px;border-radius:10px;
+}
+.inwork-trigger-arr{color:rgba(255,255,255,.4);font-size:16px}
+
+/* In-work sheet */
+.iw-card{
+  background:rgba(255,255,255,.06);border-radius:14px;padding:14px;
+  margin-bottom:8px;border:1px solid rgba(255,255,255,.1);
+}
+.iw-card-name{font-size:14px;font-weight:800;color:#fff;margin-bottom:4px}
+.iw-card-meta{font-size:12px;color:rgba(255,255,255,.45);margin-bottom:10px;line-height:1.5}
+.iw-card-btns{display:flex;gap:7px}
+.btn-iw{
+  flex:1;padding:9px 7px;border-radius:10px;border:none;
+  font-family:'Raleway',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
+}
+.btn-iw-back{background:rgba(255,255,255,.1);color:#fff}
+.btn-iw-adv{background:var(--orange);color:#fff}
+.btn-iw-edit{background:rgba(255,255,255,.08);color:#fff;width:36px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:10px;border:none;cursor:pointer;font-size:14px}
+.btn-iw-del{background:rgba(255,59,48,.12);color:var(--red);width:36px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:10px;border:none;cursor:pointer;font-size:18px;font-weight:700}
+.iw-drop-zone{
+  border:2px dashed rgba(255,59,48,.4);border-radius:14px;padding:20px;
+  text-align:center;font-size:13px;font-weight:600;color:rgba(255,59,48,.7);
+  margin-bottom:12px;transition:all .2s;
+}
+.iw-drop-zone.over{border-color:var(--red);background:rgba(255,59,48,.08);color:var(--red)}
+
+/* ── FLASH LIST ── */
+.flash-section{padding:16px}
+.flash-list{display:flex;flex-direction:column;gap:8px}
+.flash-card{
+  background:rgba(255,255,255,.10);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-radius:16px;padding:13px 14px;
+  display:flex;align-items:center;gap:13px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 2px 10px rgba(0,0,0,.15);transition:background .12s;
+}
+.flash-card:active{background:rgba(255,255,255,.16)}
+.flash-icon-box{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.flash-info{flex:1;min-width:0}
+.flash-name{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flash-meta{font-size:12px;color:rgba(255,255,255,.45);margin-top:2px}
+.marker-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.mg{background:var(--green);box-shadow:0 0 0 3px rgba(52,199,89,.25)}
+.mr{background:var(--red);box-shadow:0 0 0 3px rgba(255,59,48,.25)}
+.empty-st{text-align:center;padding:60px 20px;color:rgba(255,255,255,.35)}
+.empty-st .ei{font-size:48px;margin-bottom:12px}
+.empty-st p{font-size:15px;font-weight:500}
+
+/* ── SHOOTS SECTION ── */
+.shoots-section{padding:16px}
+.shoots-list{display:flex;flex-direction:column;gap:8px}
+.src-card{
+  background:rgba(255,255,255,.10);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-radius:16px;padding:14px 16px;
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:0 2px 10px rgba(0,0,0,.15);
+}
+.src-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.src-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.src-info{flex:1;min-width:0}
+.src-name{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.2px}
+.src-meta{font-size:12px;color:rgba(255,255,255,.45);margin-top:3px;line-height:1.5}
+.src-btns{display:flex;gap:8px}
+.btn-src-edit{flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;padding:10px;border-radius:11px;font-family:'Raleway',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.btn-src-open{flex:1;background:var(--red);border:none;color:#fff;padding:10px;border-radius:11px;font-family:'Raleway',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(255,59,48,.4)}
+
+/* ── COMPLETED SECTION ── */
+.btn-completed-toggle{
+  display:flex;align-items:center;gap:10px;
+  margin:4px 0 0;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:13px 16px;cursor:pointer;width:100%;
+  font-family:'Raleway',sans-serif;font-size:14px;font-weight:700;color:rgba(255,255,255,.7);
+}
+.btn-completed-toggle .ct-arr{margin-left:auto;transition:transform .2s}
+.btn-completed-toggle.open .ct-arr{transform:rotate(90deg)}
+.completed-list{display:none;margin-top:8px;flex-direction:column;gap:8px}
+.completed-list.open{display:flex}
+.done-card{
+  background:rgba(255,255,255,.06);border-radius:14px;padding:14px;
+  border:1px solid rgba(255,255,255,.1);
+}
+.done-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.done-card-info{flex:1}
+.done-card-name{font-size:14px;font-weight:800;color:#fff}
+.done-card-meta{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
+.done-stars{display:flex;gap:4px;margin:8px 0}
+.star{font-size:22px;cursor:pointer;opacity:.35;transition:opacity .12s,transform .12s;user-select:none}
+.star.lit{opacity:1}
+.star:active{transform:scale(1.3)}
+.done-comment{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:10px 12px;color:#fff;
+  font-family:'Raleway',sans-serif;font-size:13px;font-weight:500;
+  width:100%;resize:none;outline:none;min-height:48px;height:auto;overflow:hidden;line-height:1.5;display:block;
+}
+.done-comment::placeholder{color:rgba(255,255,255,.25)}
+.btn-done-del{background:none;border:none;color:rgba(255,59,48,.6);font-size:18px;cursor:pointer;padding:2px 4px}
+
+/* ── PANEL ── */
+.panel{
+  position:fixed;inset:0;z-index:200;
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .3s cubic-bezier(.32,1.2,.5,1);
+}
+.panel.open{transform:translateX(0)}
+@media(min-width:600px){.panel{position:absolute}}
+#panel-flash,#panel-notes,#panel-inwork,#panel-completed{background:#0f0f0f}
+.panel-hdr{
+  background:rgba(0,0,0,.5);
+  display:flex;align-items:center;gap:10px;
+  padding:calc(var(--safe-top) + 10px) 16px 12px;
+  border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+}
+@media(min-width:600px){.panel-hdr{padding:30px 16px 12px}}
+.btn-back{
+  background:rgba(255,255,255,.1);border:none;color:#fff;
+  display:flex;align-items:center;gap:4px;
+  padding:7px 12px 7px 8px;border-radius:10px;
+  font-family:'Raleway',sans-serif;font-size:14px;font-weight:700;cursor:pointer;
+}
+.panel-ttl{font-size:17px;font-weight:800;flex:1;color:#fff;letter-spacing:-.3px}
+.btn-params{background:rgba(255,255,255,.1);border:none;color:#fff;padding:8px 13px;border-radius:10px;font-family:'Raleway',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+.panel-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
+.panel-foot{
+  background:rgba(0,0,0,.5);padding:12px 16px calc(12px + var(--safe-bottom));
+  border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;
+  display:flex;flex-direction:column;gap:8px;
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+}
+.hero-card{background:rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:18px;display:flex;align-items:center;gap:14px;border:1px solid rgba(255,255,255,.12)}
+.hero-icon{width:58px;height:58px;border-radius:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hero-info{flex:1}
+.hero-name{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.hero-meta{font-size:13px;color:rgba(255,255,255,.45);margin-top:3px}
+.hero-status{display:flex;align-items:center;gap:6px;margin-top:7px}
+.status-lbl{font-size:12px;font-weight:600}
+.st-green{color:var(--green)}.st-red{color:var(--red)}
+.shoots-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.shoots-lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.35)}
+.btn-add-r{background:var(--red);border:none;color:#fff;width:30px;height:30px;border-radius:9px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:300;line-height:1}
+.shoot-item{background:rgba(255,255,255,.06);border-radius:12px;padding:12px 14px;margin-bottom:7px;position:relative;border:1px solid rgba(255,255,255,.09)}
+.si-name{font-size:14px;font-weight:700;padding-right:28px;color:#fff}
+.si-meta{font-size:12px;color:rgba(255,255,255,.4);margin-top:3px}
+.btn-rm{position:absolute;top:9px;right:9px;background:transparent;border:none;color:rgba(255,255,255,.35);font-size:20px;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px}
+.btn-erase{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#fff;padding:13px;border-radius:12px;font-family:'Raleway',sans-serif;font-size:14px;font-weight:600;cursor:pointer;width:100%}
+.btn-del-flash{background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.25);color:var(--red);padding:13px;border-radius:12px;font-family:'Raleway',sans-serif;font-size:14px;font-weight:600;cursor:pointer;width:100%}
+.no-items{font-size:13px;color:rgba(255,255,255,.35);padding:6px 0}
+
+/* ── NOTES ── */
+.note-block{background:rgba(255,255,255,.07);border-radius:14px;padding:14px 42px 14px 14px;margin-bottom:10px;border:1px solid rgba(255,255,255,.1);position:relative}
+.note-textarea{background:transparent;border:none;color:#fff;font-family:'Raleway',sans-serif;font-size:15px;font-weight:500;width:100%;resize:none;outline:none;min-height:44px;height:auto;overflow:hidden;line-height:1.6;display:block}
+.note-textarea::placeholder{color:rgba(255,255,255,.28)}
+.btn-rm-note{position:absolute;top:10px;right:10px;background:transparent;border:none;color:rgba(255,255,255,.3);font-size:20px;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+.btn-add-note{background:rgba(255,255,255,.06);border:1.5px dashed rgba(255,255,255,.2);color:rgba(255,255,255,.45);padding:14px;border-radius:12px;font-family:'Raleway',sans-serif;font-size:14px;font-weight:600;width:100%;cursor:pointer;margin-bottom:12px}
+
+/* ── SHOOT CHECKBOXES ── */
+.shoot-checks{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.chk-row{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border-radius:9px;padding:7px 12px;cursor:pointer;flex:1;min-width:130px;user-select:none;border:1px solid rgba(255,255,255,.08);transition:background .12s}
+.chk-row:active{background:rgba(255,255,255,.12)}
+.chk-box{width:20px;height:20px;border-radius:6px;border:2px solid rgba(255,255,255,.3);background:transparent;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.chk-box.checked{background:var(--green);border-color:var(--green)}
+.chk-box.checked::after{content:'✓';color:#fff;font-size:12px;font-weight:800;line-height:1}
+.chk-lbl{font-size:12px;font-weight:600;color:rgba(255,255,255,.7);line-height:1.2}
+
+/* ── SHEETS ── */
+.sheet{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;
+  display:flex;align-items:flex-end;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.sheet.open{opacity:1;pointer-events:all}
+.sheet-in{
+  background:#1c1c1e;border-radius:20px 20px 0 0;
+  padding:16px 16px calc(32px + var(--safe-bottom));
+  width:100%;height:88vh;
+  overflow-y:scroll;-webkit-overflow-scrolling:touch;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.2,.5,1);
+}
+.sheet.open .sheet-in{transform:translateY(0)}
+@media(min-width:600px){
+  .sheet{position:absolute}
+  .sheet-in{height:85%}
+}
+.handle{width:36px;height:4px;background:rgba(255,255,255,.14);border-radius:2px;margin:0 auto 16px}
+.sh-title{font-size:17px;font-weight:800;margin-bottom:18px;letter-spacing:-.3px;color:#fff}
+.fld{margin-bottom:14px}
+.fld-lbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.38);margin-bottom:7px}
+.fld-inp{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:11px;padding:12px 14px;color:#fff;font-family:'Raleway',sans-serif;font-size:16px;font-weight:500;width:100%;outline:none;-webkit-appearance:none;appearance:none}
+.fld-inp:focus{border-color:var(--red)}
+.fld-inp::placeholder{color:rgba(255,255,255,.28)}
+.fld-inp[type=date],.fld-inp[type=time]{color-scheme:dark}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:8px 14px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.65);transition:all .12s;user-select:none}
+.chip.on{background:var(--red);border-color:var(--red);color:#fff}
+.color-row{display:flex;gap:10px;flex-wrap:wrap}
+.cswatch{width:38px;height:38px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .12s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.cswatch.on{border-color:#fff;transform:scale(1.12)}
+.btn-prim{background:var(--red);border:none;color:#fff;padding:15px;border-radius:13px;font-family:'Raleway',sans-serif;font-size:16px;font-weight:800;width:100%;cursor:pointer;margin-top:6px;box-shadow:0 4px 16px rgba(255,59,48,.4)}
+.btn-prim:active{opacity:.85}
+.btn-sec{background:transparent;border:none;color:rgba(255,255,255,.45);padding:13px;border-radius:13px;font-family:'Raleway',sans-serif;font-size:15px;font-weight:600;width:100%;cursor:pointer;margin-top:2px}
+.extra-item{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.extra-inp{background:transparent;border:none;color:#fff;font-family:'Raleway',sans-serif;font-size:14px;flex:1;outline:none}
+.extra-inp::placeholder{color:rgba(255,255,255,.28)}
+.btn-rm-ex{background:none;border:none;color:rgba(255,255,255,.3);font-size:18px;cursor:pointer;padding:2px}
+.btn-add-ex{background:transparent;border:1.5px dashed rgba(255,255,255,.18);color:rgba(255,255,255,.38);padding:10px;border-radius:10px;font-family:'Raleway',sans-serif;font-size:13px;font-weight:600;width:100%;cursor:pointer;margin-bottom:10px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.06);border-radius:11px;padding:12px 14px;margin-top:-4px;margin-bottom:14px}
+.toggle-lbl{font-size:14px;font-weight:500;color:#fff}
+.toggle-switch{position:relative;width:44px;height:26px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,.2);border-radius:13px;cursor:pointer;transition:.2s}
+.toggle-slider::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.toggle-switch input:checked+.toggle-slider{background:var(--red)}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(18px)}
+.pull-item{background:rgba(255,255,255,.06);border-radius:12px;padding:14px;margin-bottom:8px}
+.pull-item-name{font-size:14px;font-weight:700;color:#fff}
+.pull-item-meta{font-size:12px;color:rgba(255,255,255,.4);margin-top:3px}
+.pull-deadline-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.btn-pull-add{background:var(--red);border:none;color:#fff;padding:10px 16px;border-radius:10px;font-family:'Raleway',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+
+/* ── CONFIRM ── */
+.confirm{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .18s;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.confirm.open{opacity:1;pointer-events:all}
+@media(min-width:600px){.confirm{position:absolute}}
+.conf-box{background:#1c1c1e;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:24px;width:100%;max-width:310px;text-align:center}
+.conf-box h3{font-size:17px;font-weight:800;margin-bottom:8px;color:#fff}
+.conf-box p{font-size:14px;color:rgba(255,255,255,.45);margin-bottom:20px;line-height:1.5}
+.conf-btns{display:flex;gap:8px}
+.conf-btns button{flex:1;padding:13px;border-radius:12px;border:none;font-family:'Raleway',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+.cyes{background:var(--red);color:#fff}
+.cno{background:rgba(255,255,255,.1);color:#fff}
+</style>
+</head>
+<body>
+<div class="desktop-wrap">
+<div class="app-frame">
+
+<!-- BG -->
+<div class="bg-layer" id="bg-layer">
+  <div class="bg-img" id="bg-a"></div>
+  <div class="bg-img" id="bg-b"></div>
+  <div class="bg-overlay"></div>
+</div>
+
+<div class="app">
+  <div class="statusbar-pad"></div>
+  <div class="topbar">
+    <div class="app-row">
+      <div class="app-name" id="app-name">СНЯТО</div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('calendar')">Календарь</button>
+      <button class="tab" onclick="switchTab('flash')">Флешки</button>
+      <button class="tab" onclick="switchTab('shoots')">Съёмка</button>
+    </div>
+  </div>
+
+  <!-- STATUS STRIP — calendar only -->
+  <div class="status-strip" id="status-strip" style="display:none"></div>
+
+  <div class="scroll" id="main-scroll">
+    <!-- CALENDAR -->
+    <div class="section active" id="sec-calendar">
+      <div class="cal-outer">
+        <div class="cal-wrap" id="cal-wrap-el">
+          <div class="cal-nav">
+            <div class="cal-month-txt" id="cal-label"></div>
+            <div class="cal-nav-btns">
+              <button class="cal-nbtn" onclick="calMove(-1)">‹</button>
+              <button class="cal-nbtn" onclick="calMove(1)">›</button>
+            </div>
+          </div>
+          <div class="cal-wdays" id="cal-wdays"></div>
+          <div class="cal-grid-wrap">
+            <div class="cal-grid settled" id="cal-grid"></div>
+          </div>
+        </div>
+      </div>
+      <!-- In-work trigger — below calendar -->
+      <div style="padding:10px 14px 0">
+        <div class="inwork-trigger" id="inwork-trigger" onclick="openPanel('panel-inwork')">
+          <span class="inwork-trigger-txt">В работе</span>
+          <span class="inwork-trigger-badge" id="inwork-count">0</span>
+          <span class="inwork-trigger-arr">›</span>
+        </div>
+      </div>
+      <div class="ev-section" id="ev-section"></div>
+    </div>
+
+    <!-- FLASH -->
+    <div class="section" id="sec-flash">
+      <div class="flash-section">
+        <div class="flash-list" id="flash-list"></div>
+        <div class="empty-st" id="flash-empty" style="display:none">
+          <div class="ei">💾</div><p>Нет флешек. Нажми + чтобы добавить</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHOOTS -->
+    <div class="section" id="sec-shoots">
+      <div class="shoots-section">
+        <div class="shoots-list" id="shoots-list"></div>
+        <div class="empty-st" id="shoots-empty" style="display:none">
+          <div class="ei">🎬</div><p>Нет съёмок. Нажми + чтобы добавить</p>
+        </div>
+        <button class="btn-completed-toggle" id="btn-completed-toggle" onclick="openPanel('panel-completed')">
+          ✓ Завершённые съёмки
+          <span class="ct-arr">›</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FABs -->
+<button class="fab" id="fab-cal"    onclick="openAddEvent(null)">+</button>
+<button class="fab" id="fab-flash"  onclick="fabFlashClick()">+</button>
+<button class="fab" id="fab-shoots" onclick="openAddEvent(null)">+</button>
+<button class="btn-today" id="btn-today" onclick="goToToday()">↑ Сегодня</button>
+<button class="day-add-btn" id="day-add-btn" onclick="onDayAddBtn()">+</button>
+
+<!-- MORNING POPUP -->
+<div class="morning-overlay" id="morning-overlay">
+  <div class="morning-box">
+    <div class="morning-date" id="morning-date"></div>
+    <div class="morning-title" id="morning-title"></div>
+    <div class="morning-items" id="morning-items"></div>
+    <button class="btn-morning-close" onclick="closeMorning()">Понял, поехали</button>
+  </div>
+</div>
+
+<!-- IN-WORK PANEL -->
+<div class="panel" id="panel-inwork">
+  <div class="panel-hdr">
+    <button class="btn-back" onclick="closePanel('panel-inwork')">
+      <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M8 1L1.5 7.5L8 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Назад
+    </button>
+    <div class="panel-ttl">В работе</div>
+  </div>
+  <div class="panel-body" id="inwork-body">
+    <div class="iw-drop-zone" id="iw-drop-zone">Перетащи съёмку сюда</div>
+    <div id="inwork-list"></div>
+  </div>
+</div>
+
+<!-- FLASH PANEL -->
+<div class="panel" id="panel-flash">
+  <div class="panel-hdr">
+    <button class="btn-back" onclick="closePanel('panel-flash')">
+      <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M8 1L1.5 7.5L8 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Флешки
+    </button>
+    <div class="panel-ttl" id="pd-title"></div>
+    <button class="btn-params" onclick="openEditFlash()">Параметры</button>
+  </div>
+  <div class="panel-body">
+    <div class="hero-card" id="pd-hero"></div>
+    <div class="shoots-hdr">
+      <span class="shoots-lbl">Съёмки на флешке</span>
+      <button class="btn-add-r" onclick="openAddToFlash()">+</button>
+    </div>
+    <div id="pd-shoots"></div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn-erase" onclick="doErase()">🗑 Стереть (очистить съёмки)</button>
+    <button class="btn-del-flash" onclick="doDeleteFlash()">Удалить флешку</button>
+  </div>
+</div>
+
+<!-- COMPLETED PANEL -->
+<div class="panel" id="panel-completed">
+  <div class="panel-hdr">
+    <button class="btn-back" onclick="closePanel('panel-completed')">
+      <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M8 1L1.5 7.5L8 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Съёмка
+    </button>
+    <div class="panel-ttl">Завершённые</div>
+  </div>
+  <div class="panel-body">
+    <div id="completed-list"></div>
+    <div class="empty-st" id="completed-empty" style="display:none">
+      <div class="ei">✓</div><p>Нет завершённых съёмок</p>
+    </div>
+  </div>
+</div>
+
+<!-- NOTES PANEL -->
+<div class="panel" id="panel-notes">
+  <div class="panel-hdr">
+    <button class="btn-back" onclick="closePanel('panel-notes')">
+      <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M8 1L1.5 7.5L8 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Съёмка
+    </button>
+    <div class="panel-ttl" id="notes-panel-title"></div>
+  </div>
+  <div class="panel-body" id="notes-panel-body">
+    <button class="btn-add-note" id="btn-add-note" onclick="addNoteBlock()">＋ Добавить заметку</button>
+    <div id="notes-blocks-container"></div>
+  </div>
+</div>
+
+<!-- SHEET: flash params -->
+<div class="sheet" id="sh-flash">
+  <div class="sheet-in">
+    <div class="handle"></div>
+    <div class="sh-title" id="sh-flash-title">Новая флешка</div>
+    <div class="fld"><div class="fld-lbl">Название</div><input class="fld-inp" id="nf-name" type="text" placeholder="Название флешки"></div>
+    <div class="fld"><div class="fld-lbl">Объём памяти</div><div class="chips" id="nf-size"></div></div>
+    <div class="fld"><div class="fld-lbl">Цвет</div><div class="color-row" id="nf-color"></div></div>
+    <div class="fld"><div class="fld-lbl">Производитель</div><div class="chips" id="nf-brand"></div></div>
+    <button class="btn-prim" id="nf-btn" onclick="saveFlash()">Добавить</button>
+    <button class="btn-sec" onclick="closeSheet('sh-flash')">Отмена</button>
+  </div>
+</div>
+
+<!-- SHEET: add to flash -->
+<div class="sheet" id="sh-add-to-flash">
+  <div class="sheet-in">
+    <div class="handle"></div>
+    <div class="sh-title">Добавить съёмку</div>
+    <div id="add-to-flash-list"></div>
+    <div id="atf-manual" style="display:none">
+      <div style="height:1px;background:rgba(255,255,255,.08);margin:4px 0 16px"></div>
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Своя запись</div>
+      <div class="fld"><div class="fld-lbl">Название</div><input class="fld-inp" id="fm-name" type="text" placeholder="Название или описание"></div>
+      <div class="fld"><div class="fld-lbl">Дата</div><input class="fld-inp" id="fm-date" type="date"></div>
+      <div class="fld"><div class="fld-lbl">Дедлайн</div><input class="fld-inp" id="fm-deadline" type="date"></div>
+      <button class="btn-prim" style="margin-bottom:8px" onclick="saveManualFlashShoot()">Добавить свою запись</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-sec" style="flex:1;margin:0" onclick="closeSheet('sh-add-to-flash')">Отмена</button>
+      <button class="btn-sec" style="flex:1;margin:0;color:var(--red);font-weight:700" id="atf-manual-btn" onclick="toggleAtfManual()">+ Добавить свою</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHEET: new/edit event -->
+<div class="sheet" id="sh-event">
+  <div class="sheet-in">
+    <div class="handle"></div>
+    <div class="sh-title" id="sh-event-title">Новая съёмка</div>
+    <div class="fld">
+      <div class="fld-lbl">Тип</div>
+      <div class="chips" id="ev-type-chips"></div>
+      <input class="fld-inp" id="ev-custom-type" type="text" placeholder="Свой тип..." style="margin-top:8px;display:none">
+    </div>
+    <div class="fld"><div class="fld-lbl">Имя клиента</div><input class="fld-inp" id="ev-name" type="text" placeholder="Имя"></div>
+    <div class="fld"><div class="fld-lbl">Дата съёмки</div><input class="fld-inp" id="ev-date" type="date"></div>
+    <div class="fld"><div class="fld-lbl">Время</div><input class="fld-inp" id="ev-time" type="time"></div>
+    <div class="fld"><div class="fld-lbl">Дедлайн (необязательно)</div><input class="fld-inp" id="ev-deadline" type="date"></div>
+    <div class="toggle-row">
+      <span class="toggle-lbl">Выделять дни до дедлайна</span>
+      <label class="toggle-switch"><input type="checkbox" id="ev-highlight-range"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="fld"><div class="fld-lbl">Телефон</div><input class="fld-inp" id="ev-phone" type="tel" placeholder="+7"></div>
+    <div class="fld"><div class="fld-lbl">Ссылка (соцсети)</div><input class="fld-inp" id="ev-link" type="url" placeholder="https://..."></div>
+    <div id="ev-extras"></div>
+    <button class="btn-add-ex" onclick="addEvExtra()">＋ Дополнительное поле</button>
+    <button class="btn-prim" onclick="saveEvent()">Сохранить</button>
+    <button class="btn-sec" onclick="closeSheet('sh-event')">Отмена</button>
+  </div>
+</div>
+
+<div class="day-tip hidden" id="day-tip"></div>
+
+<div class="confirm" id="confirm">
+  <div class="conf-box">
+    <h3 id="conf-title"></h3>
+    <p id="conf-msg"></p>
+    <div class="conf-btns">
+      <button class="cno" onclick="closeConfirm()">Отмена</button>
+      <button class="cyes" id="conf-ok">Удалить</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app-frame -->
+</div><!-- /desktop-wrap -->
+
+<script>
+/* ═══ CONSTANTS ═══ */
+const SIZES=['16','32','64','128','256'];
+const BRANDS=['Transcend','SanDisk','Kingston','Samsung'];
+const EV_TYPES=['Свадьба','Мероприятие','Реклама','Предметка'];
+const COLORS=[
+  {name:'Серый',hex:'#374151'},{name:'Синий',hex:'#007aff'},
+  {name:'Зелёный',hex:'#34c759'},{name:'Красный',hex:'#ff3b30'},
+  {name:'Оранжевый',hex:'#ff9500'},{name:'Жёлтый',hex:'#ffcc00'},
+  {name:'Белый',hex:'#e5e7eb'},
+];
+const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const WDS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const STAGE_INFO=[
+  {label:'Монтаж',bg:'#ff9500',color:'#fff',dot:'#ff9500'},
+  {label:'Утверждение',bg:'#c9a800',color:'#fff',dot:'#c9a800'},
+  {label:'Готово',bg:'#34c759',color:'#fff',dot:'#34c759'},
+];
+const FONTS=[
+  {f:'Climate Crisis',w:400},{f:'Russo One',w:400},{f:'Commissioner',w:700},
+  {f:'Hachi Maru Pop',w:400},{f:'Stick',w:400},{f:'Delta Gothic One',w:400},
+  {f:'Yuji Boku',w:400},{f:'Seymour One',w:400},{f:'Rubik Scribble',w:400},
+];
+const BG_IMGS=['bg1.JPG','bg2.JPG','bg3.JPG','bg4.JPG','bg5.JPG'];
+const DB_KEY='_db_v2';
+
+/* ═══ DATA ═══ */
+function db(){return JSON.parse(localStorage.getItem(DB_KEY)||'{"events":[],"flashes":[]}')}
+function sv(d){localStorage.setItem(DB_KEY,JSON.stringify(d))}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
+function p2(n){return String(n).padStart(2,'0')}
+function toDS(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+
+/* ═══ STATE ═══ */
+const TODAY=new Date();
+const TDS=toDS(TODAY);
+let calY=TODAY.getFullYear(),calM=TODAY.getMonth();
+let curTab='calendar';
+let curFid=null,editMode=false;
+let evEditId=null,evType='',evExtras=[];
+let nfState={name:'',size:'64',colorHex:'#374151',brand:''};
+let curNotesEvId=null;
+
+/* ═══ FONT ANIMATION ═══ */
+let fontIdx=0;
+function cycleFont(){
+  const el=document.getElementById('app-name');
+  el.classList.add('fading');
+  setTimeout(()=>{
+    fontIdx=(fontIdx+1)%FONTS.length;
+    const f=FONTS[fontIdx];
+    el.style.fontFamily=`'${f.f}',sans-serif`;
+    el.style.fontWeight=f.w;
+    el.classList.remove('fading');
+  },220);
+}
+setInterval(cycleFont,2000);
+
+/* ═══ BACKGROUND ═══ */
+let bgActive='a',bgLastIdx=-1;
+function randBg(){
+  let i;
+  do{i=Math.floor(Math.random()*BG_IMGS.length);}while(i===bgLastIdx&&BG_IMGS.length>1);
+  bgLastIdx=i; return BG_IMGS[i];
+}
+function switchBg(){
+  const next=bgActive==='a'?'b':'a';
+  const inc=document.getElementById('bg-'+next);
+  const out=document.getElementById('bg-'+bgActive);
+  inc.style.backgroundImage=`url('${randBg()}')`;
+  inc.classList.add('visible'); out.classList.remove('visible');
+  bgActive=next;
+}
+switchBg();
+
+/* ═══ MORNING POPUP ═══ */
+function checkMorning(){
+  const data=db();
+  const key='_morning_'+TDS;
+  if(localStorage.getItem(key)) return;
+  const items=[];
+
+  // Today's shoots
+  const todayShoots=data.events.filter(e=>e.date===TDS&&(e.stage||0)<3);
+  todayShoots.forEach(e=>{
+    items.push({type:'shoot',title:`Съёмка: ${e.clientName||e.type||'Без имени'}`,sub:e.time?`Время: ${e.time}`:'',cls:''});
+  });
+
+  // Today's deadlines
+  const todayDl=data.events.filter(e=>e.deadline===TDS&&(e.stage||0)<3);
+  todayDl.forEach(e=>{
+    items.push({type:'deadline',title:`Дедлайн: ${e.clientName||e.type||'Без имени'}`,sub:'Сегодня последний день',cls:'warn'});
+  });
+
+  // Overdue deadlines
+  const overdue=data.events.filter(e=>e.deadline&&e.deadline<TDS&&(e.stage||0)<3);
+  overdue.forEach(e=>{
+    const days=Math.round((new Date(TDS)-new Date(e.deadline))/864e5);
+    items.push({type:'overdue',title:`Просрочен: ${e.clientName||e.type||'Без имени'}`,sub:`Просрочен на ${days} дн.`,cls:'warn'});
+  });
+
+  // Upcoming deadlines (1-3 days)
+  const upcoming=data.events.filter(e=>{
+    if(!e.deadline||e.deadline<=TDS||(e.stage||0)>=3) return false;
+    const d=Math.round((new Date(e.deadline)-new Date(TDS))/864e5);
+    return d>=1&&d<=3;
+  });
+  upcoming.forEach(e=>{
+    const d=Math.round((new Date(e.deadline)-new Date(TDS))/864e5);
+    items.push({type:'upcoming',title:`До дедлайна: ${e.clientName||e.type||'Без имени'}`,sub:`Осталось ${d} дн.`,cls:'ok'});
+  });
+
+  if(!items.length) return; // nothing urgent — don't show
+
+  const dayNames=['воскресенье','понедельник','вторник','среду','четверг','пятницу','субботу'];
+  document.getElementById('morning-date').textContent=
+    TODAY.getDate()+' '+MONTHS[TODAY.getMonth()].toLowerCase()+', '+dayNames[TODAY.getDay()];
+  document.getElementById('morning-title').textContent=
+    todayShoots.length?`Сегодня ${todayShoots.length} съёмк${todayShoots.length===1?'а':'и'}`
+    :todayDl.length?'Сегодня дедлайн'
+    :overdue.length?'Есть просроченные дедлайны'
+    :'Горящие дедлайны';
+
+  document.getElementById('morning-items').innerHTML=items.map(it=>
+    `<div class="morning-item ${it.cls}">
+      <div class="morning-item-title">${it.title}</div>
+      ${it.sub?`<div class="morning-item-sub">${it.sub}</div>`:''}
+    </div>`).join('');
+
+  document.getElementById('morning-overlay').classList.add('open');
+  localStorage.setItem(key,'1');
+}
+function closeMorning(){
+  document.getElementById('morning-overlay').classList.remove('open');
+}
+
+/* ═══ STATUS STRIP ═══ */
+function renderStatusStrip(){
+  const strip=document.getElementById('status-strip');
+  if(curTab!=='calendar'){strip.style.display='none';return;}
+  const data=db();
+  const pills=[];
+  const todayEvs=data.events.filter(e=>e.date===TDS&&(e.stage||0)<3);
+  if(todayEvs.length) pills.push(`Сегодня ${todayEvs.length} съёмк${todayEvs.length===1?'а':'и'}`);
+  const todayDl=data.events.filter(e=>e.deadline===TDS&&(e.stage||0)<3);
+  if(todayDl.length) pills.push(`Сегодня дедлайн`);
+  const overdue=data.events.filter(e=>e.deadline&&e.deadline<TDS&&(e.stage||0)<3);
+  if(overdue.length) pills.push(`Просрочено: ${overdue.length}`);
+  const inWork=data.events.filter(e=>isInWork(e));
+  if(inWork.length) pills.push(`В работе: ${inWork.length}`);
+  if(!pills.length) pills.push('Сегодня сьёмок нет');
+  strip.style.display='flex';
+  const isAlert=todayEvs.length||todayDl.length||overdue.length;
+  strip.innerHTML=pills.map((p,i)=>
+    `<div class="status-pill ${i>0&&!isAlert?'neutral':''}">${p}</div>`).join('');
+}
+
+/* ═══ TABS ═══ */
+function switchTab(t){
+  const prev=curTab; curTab=t;
+  document.querySelectorAll('.tab').forEach((el,i)=>
+    el.classList.toggle('active',['calendar','flash','shoots'][i]===t));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+t).classList.add('active');
+  ['cal','flash','shoots'].forEach(id=>{
+    document.getElementById('fab-'+id).style.display=id===t?'flex':'none';
+  });
+  if(prev!==t) switchBg();
+  renderStatusStrip();
+  if(t==='calendar'){renderCal();checkTodayBtn();}
+  if(t==='flash') renderFlashList();
+  if(t==='shoots') renderShootsList();
+  if(t!=='calendar') document.getElementById('btn-today').classList.remove('show');
+}
+
+/* ═══ IN-WORK LOGIC ═══ */
+function isInWork(ev){
+  if(ev.inWork) return true;
+  // auto: next day after shoot date, stage < 3
+  if(!ev.date||(ev.stage||0)>=3) return false;
+  const shootDate=new Date(ev.date+'T00:00');
+  const nextDay=new Date(shootDate); nextDay.setDate(nextDay.getDate()+1);
+  return new Date(TDS+'T00:00')>=nextDay;
+}
+function renderInWorkBadge(){
+  const data=db();
+  const n=data.events.filter(e=>isInWork(e)).length;
+  document.getElementById('inwork-count').textContent=n;
+  const trigger=document.getElementById('inwork-trigger');
+  trigger.style.borderColor=n>0?'rgba(255,59,48,.4)':'rgba(255,255,255,.12)';
+}
+function renderInWorkPanel(){
+  const data=db();
+  const evs=data.events.filter(e=>isInWork(e));
+  const el=document.getElementById('inwork-list');
+  if(!evs.length){el.innerHTML='<div style="color:rgba(255,255,255,.4);font-size:13px;padding:8px 0">Нет проектов в работе</div>';return;}
+  el.innerHTML=evs.map(ev=>{
+    const st=ev.stage||0;
+    const info=STAGE_INFO[Math.min(st,2)];
+    const typeStr=ev.type?`[${ev.type}] `:'';
+    let meta=ev.date||'—'; if(ev.time) meta+=` · ${ev.time}`;
+    if(ev.deadline){
+      const d=daysUntil(ev.deadline);
+      meta+=d!==null?(d<0?` · ⚠ просрочен`:(d===0?` · дедлайн сегодня`:` · ${d} дн. до дедлайна`)):'';
+    }
+    return `<div class="iw-card">
+      <div class="iw-card-name">${typeStr}${ev.clientName||'Без имени'}</div>
+      <div class="iw-card-meta">${meta}</div>
+      <div class="iw-card-btns">
+        ${st>0?`<button class="btn-iw btn-iw-back" onclick="backStage('${ev.id}');renderInWorkPanel()">◀</button>`:''}
+        <button class="btn-iw btn-iw-adv" style="background:${info.bg}" onclick="advStage('${ev.id}');renderInWorkPanel()">${info.label}</button>
+        <button class="btn-iw btn-iw-edit" onclick="openEditEvent('${ev.id}')">✏️</button>
+        <button class="btn-iw btn-iw-del" onclick="deleteEvent('${ev.id}')">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* drag-and-drop to in-work */
+function initDragDrop(){
+  const dz=document.getElementById('iw-drop-zone');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+  dz.addEventListener('drop',e=>{
+    e.preventDefault(); dz.classList.remove('over');
+    const id=e.dataTransfer.getData('evId');
+    if(!id) return;
+    const data=db(); const ev=data.events.find(x=>x.id===id);
+    if(ev){ev.inWork=true;sv(data);renderInWorkPanel();renderInWorkBadge();buildGrid();}
+  });
+}
+
+/* ═══ CALENDAR ═══ */
+let tapState={ds:null,timer:null},selCell=null,calBusy=false;
+
+function initCalSwipe(){
+  const el=document.getElementById('cal-wrap-el');
+  if(el._sw) return; el._sw=true;
+  let sx=0,sy=0;
+  el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+  el.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-sx;
+    const dy=Math.abs(e.changedTouches[0].clientY-sy);
+    if(Math.abs(dx)>48&&dy<40) calMove(dx<0?1:-1);
+  },{passive:true});
+}
+function calMove(dir){
+  if(calBusy) return; calBusy=true;
+  const g=document.getElementById('cal-grid');
+  g.classList.remove('settled');
+  g.classList.add(dir>0?'out-left':'out-right');
+  setTimeout(()=>{
+    calM+=dir;
+    if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;}
+    document.getElementById('cal-label').textContent=MONTHS[calM]+' '+calY;
+    g.classList.remove('out-left','out-right','settled');
+    g.classList.add(dir>0?'in-left':'in-right');
+    buildGrid();
+    g.offsetHeight;
+    g.classList.remove('in-left','in-right');
+    g.classList.add('settled');
+    checkTodayBtn();
+    setTimeout(()=>{calBusy=false;},340);
+  },310);
+}
+function goToToday(){
+  calY=TODAY.getFullYear(); calM=TODAY.getMonth();
+  document.getElementById('cal-label').textContent=MONTHS[calM]+' '+calY;
+  buildGrid(); checkTodayBtn();
+}
+function checkTodayBtn(){
+  const on=calY===TODAY.getFullYear()&&calM===TODAY.getMonth();
+  document.getElementById('btn-today').classList.toggle('show',!on&&curTab==='calendar');
+}
+function renderCal(){
+  document.getElementById('cal-label').textContent=MONTHS[calM]+' '+calY;
+  document.getElementById('cal-wdays').innerHTML=WDS.map(w=>`<div class="cal-wd">${w}</div>`).join('');
+  buildGrid(); initCalSwipe();
+}
+function buildGrid(){
+  const g=document.getElementById('cal-grid');
+  g.innerHTML=''; selCell=null;
+  const first=new Date(calY,calM,1);
+  let sd=first.getDay(); sd=sd===0?6:sd-1;
+  const dim=new Date(calY,calM+1,0).getDate();
+  const data=db();
+  const stageMap={},dlDates=new Set(),dlDone=new Set(),rangeMap={};
+  for(const ev of data.events){
+    if(!ev.date) continue;
+    const st=ev.stage||0;
+    if(st<3){if(stageMap[ev.date]===undefined||st<stageMap[ev.date])stageMap[ev.date]=st;}
+    if(ev.deadline){
+      (st>=3?dlDone:dlDates).add(ev.deadline);
+      if(ev.highlightRange){
+        const s=new Date(ev.date+'T12:00'),e2=new Date(ev.deadline+'T12:00');
+        for(let dd=new Date(s);dd<=e2;dd.setDate(dd.getDate()+1)){
+          const dds=toDS(dd);
+          if(dds!==ev.date&&rangeMap[dds]===undefined) rangeMap[dds]=st<3?st:3;
+        }
+      }
+    }
+  }
+  for(let i=0;i<sd;i++){const c=document.createElement('div');c.className='cal-cell empty';g.appendChild(c);}
+  for(let d=1;d<=dim;d++){
+    const ds=`${calY}-${p2(calM+1)}-${p2(d)}`;
+    const c=document.createElement('div'); c.className='cal-cell'; c.textContent=d;
+    if(ds===TDS) c.classList.add('today');
+    const st=stageMap[ds];
+    if(st===0) c.classList.add('stage-new');
+    else if(st===1) c.classList.add('stage-montage');
+    else if(st===2) c.classList.add('stage-approve');
+    if(st===undefined){
+      if(dlDone.has(ds)) c.classList.add('deadline-day-done');
+      else if(dlDates.has(ds)) c.classList.add('deadline-day');
+      else if(rangeMap[ds]!==undefined){
+        const r=rangeMap[ds];
+        if(r===0) c.classList.add('range-new');
+        else if(r===1) c.classList.add('range-montage');
+        else if(r===2) c.classList.add('range-approve');
+      }
+    }
+    // drag
+    c.draggable=false; // cells don't drag
+    c.addEventListener('click',()=>handleCellTap(ds,c));
+    g.appendChild(c);
+  }
+  renderEvSection(data);
+  renderInWorkBadge();
+}
+
+/* ═══ CELL TAP ═══ */
+let _tapDs=null;
+function handleCellTap(ds,cell){
+  if(tapState.ds===ds){
+    clearTimeout(tapState.timer); hideTip();
+    if(selCell){selCell.style.outline='';selCell=null;}
+    tapState={ds:null,timer:null}; openAddEvent(ds);
+  } else {
+    clearTimeout(tapState.timer); hideTip();
+    if(selCell) selCell.style.outline='';
+    selCell=cell; cell.style.outline='2px solid rgba(255,255,255,.55)';
+    tapState.ds=ds; showTip(ds,cell);
+    tapState.timer=setTimeout(()=>{
+      hideTip();if(selCell){selCell.style.outline='';selCell=null;}tapState={ds:null,timer:null};
+    },2500);
+  }
+}
+function onDayAddBtn(){
+  const ds=_tapDs; hideTip();
+  if(selCell){selCell.style.outline='';selCell=null;}
+  tapState={ds:null,timer:null}; openAddEvent(ds);
+}
+function showTip(ds,cell){
+  hideTip(); _tapDs=ds;
+  const data=db();
+  const evs=data.events.filter(e=>e.date===ds);
+  const dls=data.events.filter(e=>e.deadline===ds&&(e.stage||0)<3);
+  const tip=document.getElementById('day-tip');
+  let html='';
+  if(evs.length) html+=evs.map(e=>`${e.type?'['+e.type+'] ':''}${e.clientName||'—'}${e.time?' · '+e.time:''}`).join('<br>');
+  if(dls.length) html+=(html?'<br>':'')+'⏱ '+dls.map(e=>`Дедлайн: ${e.clientName||e.type||'—'}`).join(', ');
+  if(!html) html='Нет съёмок';
+  tip.innerHTML=html;
+  tip.className='day-tip';
+  const frame=document.querySelector('.app-frame');
+  const fr=frame.getBoundingClientRect();
+  const r=cell.getBoundingClientRect();
+  let top=r.bottom-fr.top+6, left=r.left-fr.left;
+  if(left+220>frame.offsetWidth) left=frame.offsetWidth-224;
+  if(top+80>frame.offsetHeight) top=r.top-fr.top-86;
+  tip.style.top=top+'px'; tip.style.left=left+'px';
+  const addBtn=document.getElementById('day-add-btn');
+  document.getElementById('fab-cal').style.display='none';
+  addBtn.classList.add('show');
+}
+function hideTip(){
+  document.getElementById('day-tip').className='day-tip hidden';
+  document.getElementById('day-add-btn').classList.remove('show');
+  if(curTab==='calendar') document.getElementById('fab-cal').style.display='flex';
+  _tapDs=null;
+}
+
+/* ═══ EVENT SECTION GROUPED ═══ */
+function daysUntil(ds){
+  if(!ds) return null;
+  return Math.round((new Date(ds+'T00:00')-new Date(TDS+'T00:00'))/864e5);
+}
+function renderEvSection(data){
+  if(!data) data=db();
+  const sec=document.getElementById('ev-section');
+  const active=data.events.filter(e=>(e.stage||0)<3);
+  if(!active.length){sec.innerHTML='<div style="color:rgba(255,255,255,.35);font-size:13px;padding:14px 0 0">Нет съёмок</div>';return;}
+
+  // Group
+  const groups={today:[],tomorrow:[],week:[],later:{}};
+  const tDate=new Date(TDS+'T00:00');
+  active.forEach(ev=>{
+    if(!ev.date){groups.later['Без даты']=groups.later['Без даты']||[];groups.later['Без даты'].push(ev);return;}
+    const d=Math.round((new Date(ev.date+'T00:00')-tDate)/864e5);
+    if(d===0) groups.today.push(ev);
+    else if(d===1) groups.tomorrow.push(ev);
+    else if(d>1&&d<=7) groups.week.push(ev);
+    else{
+      const key=ev.date?MONTHS[parseInt(ev.date.split('-')[1])-1]+' '+ev.date.split('-')[0]:'Позже';
+      groups.later[key]=groups.later[key]||[];
+      groups.later[key].push(ev);
+    }
+  });
+
+  let html='';
+  const renderGroup=(label,evs)=>{
+    if(!evs||!evs.length) return '';
+    return `<div class="ev-group-label">${label}</div>`+evs.map(ev=>evCard(ev)).join('');
+  };
+  html+=renderGroup('Сегодня',groups.today);
+  html+=renderGroup('Завтра',groups.tomorrow);
+  html+=renderGroup('Ближайшие',groups.week);
+  Object.entries(groups.later).forEach(([k,v])=>{ html+=renderGroup(k,v); });
+  sec.innerHTML=html;
+
+  // init drag on cards
+  sec.querySelectorAll('.ev-card').forEach(card=>{
+    const id=card.dataset.evid;
+    card.addEventListener('dragstart',e=>{
+      e.dataTransfer.setData('evId',id);
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend',()=>card.classList.remove('dragging'));
+  });
+}
+
+function evCard(ev){
+  const st=ev.stage||0,isDone=st>=3;
+  const info=STAGE_INFO[Math.min(st,2)];
+  const stageBg=isDone?'rgba(255,255,255,.15)':info.bg;
+  const stageColor=isDone?'#fff':info.color;
+  const stageLabel=isDone?'✓ Готово':info.label;
+  const dotColor=isDone?'rgba(255,255,255,.35)':info.dot;
+  const typeStr=ev.type?`[${ev.type}] `:'';
+  let meta=ev.date||'—'; if(ev.time) meta+=` · ${ev.time}`; if(ev.phone) meta+=` · ${ev.phone}`;
+  let dlHtml='';
+  if(ev.deadline){
+    const d=daysUntil(ev.deadline);
+    let txt,col;
+    if(d===null){txt=ev.deadline;col='rgba(255,255,255,.4)';}
+    else if(d<0){txt=`Просрочен (${Math.abs(d)} дн.)`;col='#ff3b30';}
+    else if(d===0){txt='Дедлайн сегодня';col='#ff3b30';}
+    else if(d===1){txt='Дедлайн завтра';col='#ff9500';}
+    else{txt=`До дедлайна: ${d} дн.`;col=d<=7?'#ff9500':'rgba(255,255,255,.4)';}
+    dlHtml=`<div class="ev-card-deadline" style="color:${col}">⏱ ${txt}</div>`;
+  }
+  const lnk=ev.link?`<a href="${ev.link}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,59,48,.12);color:#ff3b30;font-family:Raleway,sans-serif;font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;text-decoration:none;margin-top:6px">Перейти →</a>`:'';
+  return `<div class="ev-card" data-evid="${ev.id}" draggable="true">
+    <div class="ev-card-top">
+      <div class="ev-stage-dot" style="background:${dotColor}"></div>
+      <div class="ev-card-info">
+        <div class="ev-card-name">${typeStr}${ev.clientName||'Без имени'}</div>
+        <div class="ev-card-meta">${meta}</div>
+        ${dlHtml}${lnk}
+      </div>
+    </div>
+    <div class="ev-card-btns">
+      ${st>0?`<button class="btn-back-stage" onclick="backStage('${ev.id}')">◀</button>`:''}
+      <button class="btn-stage" style="background:${stageBg};color:${stageColor}" onclick="advStage('${ev.id}')">${stageLabel}</button>
+      <button class="btn-edit-ev" onclick="openEditEvent('${ev.id}')">✏️</button>
+      <button class="btn-del-ev" onclick="deleteEvent('${ev.id}')">×</button>
+    </div>
+  </div>`;
+}
+
+function advStage(id){
+  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
+  ev.stage=(ev.stage||0)+1;sv(data);buildGrid();
+  if(curTab==='shoots') renderShootsList();
+}
+function backStage(id){
+  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
+  ev.stage=Math.max(0,(ev.stage||0)-1);sv(data);buildGrid();
+  if(curTab==='shoots') renderShootsList();
+}
+function deleteEvent(id){
+  showConfirm('Удалить съёмку?','Съёмка будет удалена.',()=>{
+    const data=db();data.events=data.events.filter(e=>e.id!==id);sv(data);buildGrid();
+    if(curTab==='shoots') renderShootsList();
+  });
+}
+
+/* ═══ ADD/EDIT EVENT ═══ */
+function openAddEvent(date){
+  evEditId=null;evType='';evExtras=[];
+  document.getElementById('sh-event-title').textContent='Новая съёмка';
+  ['ev-name','ev-time','ev-phone','ev-link','ev-deadline'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ev-date').value=date||'';
+  document.getElementById('ev-custom-type').style.display='none';
+  document.getElementById('ev-custom-type').value='';
+  document.getElementById('ev-highlight-range').checked=false;
+  renderEvTypeChips();renderEvExtras();openSheet('sh-event');
+}
+function openEditEvent(id){
+  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
+  evEditId=id;evExtras=[...(ev.extras||[])];
+  evType=EV_TYPES.includes(ev.type)?ev.type:ev.type?'Своё':'';
+  document.getElementById('sh-event-title').textContent='Редактировать';
+  ['ev-name','ev-date','ev-time','ev-deadline','ev-phone','ev-link'].forEach(fid=>{
+    const map={'ev-name':ev.clientName,'ev-date':ev.date,'ev-time':ev.time,'ev-deadline':ev.deadline,'ev-phone':ev.phone,'ev-link':ev.link};
+    document.getElementById(fid).value=map[fid]||'';
+  });
+  document.getElementById('ev-highlight-range').checked=!!ev.highlightRange;
+  const ci=document.getElementById('ev-custom-type');
+  ci.style.display=evType==='Своё'?'block':'none';
+  ci.value=evType==='Своё'?(ev.type||''):'';
+  renderEvTypeChips();renderEvExtras();openSheet('sh-event');
+}
+function renderEvTypeChips(){
+  document.getElementById('ev-type-chips').innerHTML=[...EV_TYPES,'Своё'].map(t=>
+    `<div class="chip ${evType===t?'on':''}" onclick="setEvType(this,'${t}')">${t}</div>`).join('');
+}
+function setEvType(el,t){
+  evType=t;
+  document.querySelectorAll('#ev-type-chips .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('ev-custom-type').style.display=t==='Своё'?'block':'none';
+}
+function renderEvExtras(){
+  document.getElementById('ev-extras').innerHTML=evExtras.map((v,i)=>
+    `<div class="extra-item"><input class="extra-inp" placeholder="Примечание..." value="${v.replace(/"/g,'&quot;')}" oninput="evExtras[${i}]=this.value"><button class="btn-rm-ex" onclick="rmEvExtra(${i})">×</button></div>`).join('');
+}
+function addEvExtra(){evExtras.push('');renderEvExtras();}
+function rmEvExtra(i){evExtras.splice(i,1);renderEvExtras();}
+function saveEvent(){
+  const date=document.getElementById('ev-date').value;if(!date)return;
+  let type=evType==='Своё'?document.getElementById('ev-custom-type').value.trim():EV_TYPES.includes(evType)?evType:'';
+  const data=db();
+  const payload={type,highlightRange:document.getElementById('ev-highlight-range').checked,
+    clientName:document.getElementById('ev-name').value.trim(),date,
+    time:document.getElementById('ev-time').value,deadline:document.getElementById('ev-deadline').value,
+    phone:document.getElementById('ev-phone').value.trim(),link:document.getElementById('ev-link').value.trim(),
+    extras:[...evExtras]};
+  if(evEditId){const ev=data.events.find(e=>e.id===evEditId);if(ev)Object.assign(ev,payload);}
+  else data.events.push({id:uid(),stage:0,notes:[],...payload});
+  sv(data);closeSheet('sh-event');buildGrid();
+  if(curTab==='shoots') renderShootsList();
+}
+
+/* ═══ SHOOTS SECTION ═══ */
+function renderShootsList(){
+  const data=db();
+  const list=document.getElementById('shoots-list');
+  const empty=document.getElementById('shoots-empty');
+  const active=data.events.filter(e=>(e.stage||0)<3);
+  if(!active.length){list.innerHTML='';empty.style.display='block';}
+  else{
+    empty.style.display='none';
+    const evs=[...active].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    list.innerHTML=evs.map(ev=>{
+      const st=ev.stage||0,isDone=st>=3;
+      const info=STAGE_INFO[Math.min(st,2)];
+      const dot=isDone?'rgba(255,255,255,.3)':info.dot;
+      const typeStr=ev.type?`[${ev.type}] `:'';
+      let meta=ev.date||'—';if(ev.time)meta+=` · ${ev.time}`;if(ev.deadline)meta+=` · ⏱ до ${ev.deadline}`;
+      return `<div class="src-card">
+        <div class="src-top">
+          <div class="src-dot" style="background:${dot}"></div>
+          <div class="src-info"><div class="src-name">${typeStr}${ev.clientName||'Без имени'}</div><div class="src-meta">${meta}</div></div>
+        </div>
+        <div class="src-btns">
+          <button class="btn-src-edit" onclick="openEditEvent('${ev.id}')">✏️ Редактировать</button>
+          <button class="btn-src-open" onclick="openNotes('${ev.id}')">Перейти →</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  renderCompletedList(data);
+}
+
+/* ═══ COMPLETED ═══ */
+function renderCompletedList(data){
+  if(!data) data=db();
+  const done=data.events.filter(e=>(e.stage||0)>=3);
+  const list=document.getElementById('completed-list');
+  const empty=document.getElementById('completed-empty');
+  if(!done.length){
+    list.innerHTML='';
+    if(empty) empty.style.display='block';
+    return;
+  }
+  if(empty) empty.style.display='none';
+  list.innerHTML=done.map(ev=>{
+    const typeStr=ev.type?`[${ev.type}] `:'';
+    const stars=ev.rating||0;
+    return `<div class="done-card">
+      <div class="done-card-top">
+        <div class="done-card-info">
+          <div class="done-card-name">${typeStr}${ev.clientName||'Без имени'}</div>
+          <div class="done-card-meta">${ev.date||'—'}${ev.type?' · '+ev.type:''}</div>
+        </div>
+        <button class="btn-done-del" onclick="deleteEvent('${ev.id}')">×</button>
+      </div>
+      <div class="done-stars">
+        ${[1,2,3,4,5].map(n=>`<span class="star ${stars>=n?'lit':''}" onclick="setRating('${ev.id}',${n})">★</span>`).join('')}
+      </div>
+      <textarea class="done-comment" placeholder="Комментарий..." oninput="saveComment('${ev.id}',this.value);autoResize(this)">${escHtml(ev.comment||'')}</textarea>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.done-comment').forEach(autoResize);
+}
+function toggleCompleted(){
+  openPanel('panel-completed');
+  renderCompletedList();
+}
+function setRating(id,n){
+  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
+  ev.rating=ev.rating===n?0:n;sv(data);renderCompletedList(data);
+}
+function saveComment(id,val){
+  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
+  ev.comment=val;sv(data);
+}
+
+/* ═══ NOTES ═══ */
+function openNotes(evId){
+  curNotesEvId=evId;
+  const data=db(),ev=data.events.find(e=>e.id===evId);if(!ev)return;
+  const typeStr=ev.type?`[${ev.type}] `:'';
+  document.getElementById('notes-panel-title').textContent=typeStr+(ev.clientName||'Без имени');
+  renderNoteBlocks(ev.notes||[]);
+  openPanel('panel-notes');
+}
+function renderNoteBlocks(notes){
+  document.getElementById('notes-blocks-container').innerHTML=
+    (notes||[]).map((n,i)=>`
+      <div class="note-block">
+        <button class="btn-rm-note" onclick="rmNoteBlock(${i})">×</button>
+        <textarea class="note-textarea" placeholder="Введите заметку..." oninput="autoResize(this);saveNoteBlock(${i},this.value)">${escHtml(n||'')}</textarea>
+      </div>`).join('');
+  document.querySelectorAll('.note-textarea').forEach(autoResize);
+}
+function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function addNoteBlock(){
+  const data=db(),ev=data.events.find(e=>e.id===curNotesEvId);if(!ev)return;
+  if(!ev.notes)ev.notes=[];ev.notes.push('');sv(data);renderNoteBlocks(ev.notes);
+}
+function saveNoteBlock(i,val){
+  const data=db(),ev=data.events.find(e=>e.id===curNotesEvId);if(!ev)return;
+  if(!ev.notes)ev.notes=[];ev.notes[i]=val;sv(data);
+}
+function rmNoteBlock(i){
+  const data=db(),ev=data.events.find(e=>e.id===curNotesEvId);if(!ev)return;
+  if(!ev.notes)ev.notes=[];ev.notes.splice(i,1);sv(data);renderNoteBlocks(ev.notes);
+}
+
+/* ═══ FLASH SVG ═══ */
+function flashSVG(color,size=32){
+  const c=color||'#374151';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none"><path d="M18 8H82Q92 8 92 18V82Q92 92 82 92H18Q8 92 8 82V30L18 18Z" fill="${c}"/><rect x="26" y="14" width="10" height="22" rx="3" fill="white"/><rect x="40" y="14" width="10" height="22" rx="3" fill="white"/><rect x="54" y="14" width="10" height="22" rx="3" fill="white"/><rect x="68" y="14" width="10" height="22" rx="3" fill="white"/></svg>`;
+}
+
+/* ═══ FLASH LIST ═══ */
+function renderFlashList(){
+  const data=db();
+  const list=document.getElementById('flash-list'),empty=document.getElementById('flash-empty');
+  if(!data.flashes.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=data.flashes.map(f=>{
+    const m=f.marker||'green',c=f.colorHex||'#374151';
+    return `<div class="flash-card" onclick="openFlashPanel('${f.id}')">
+      <div class="flash-icon-box">${flashSVG(c,36)}</div>
+      <div class="flash-info"><div class="flash-name">${f.name||'Флешка'}</div><div class="flash-meta">${f.size?f.size+' GB':''}${f.brand?' · '+f.brand:''}</div></div>
+      <div class="marker-dot ${m==='green'?'mg':'mr'}"></div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══ FLASH PANEL ═══ */
+function openFlashPanel(id){curFid=id;renderFlashPanel();openPanel('panel-flash');}
+function renderFlashPanel(){
+  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
+  const m=f.marker||'green',c=f.colorHex||'#374151';
+  document.getElementById('pd-title').textContent=f.name||'Флешка';
+  document.getElementById('pd-hero').innerHTML=`
+    <div class="hero-icon">${flashSVG(c,46)}</div>
+    <div class="hero-info">
+      <div class="hero-name">${f.name||'Флешка'}</div>
+      <div class="hero-meta">${f.size?f.size+' GB':''}${f.brand?' · '+f.brand:''}</div>
+      <div class="hero-status">
+        <div class="marker-dot ${m==='green'?'mg':'mr'}"></div>
+        <span class="status-lbl ${m==='green'?'st-green':'st-red'}">${m==='green'?'Можно форматировать':'Нельзя форматировать'}</span>
+      </div>
+    </div>`;
+  renderPanelShoots(f);
+}
+function renderPanelShoots(f){
+  const el=document.getElementById('pd-shoots');
+  if(!(f.shootings||[]).length){el.innerHTML='<div class="no-items">Нет съёмок на флешке</div>';return;}
+  el.innerHTML=f.shootings.map(s=>{
+    const hd=!!s.hardDone,bd=!!s.backupDone;
+    return `<div class="shoot-item">
+      <button class="btn-rm" onclick="rmShoot('${s.id}')">×</button>
+      <div class="si-name">${s.name||'Без названия'}</div>
+      <div class="si-meta">📅 ${s.date||'—'} &nbsp;⏱ ${s.deadline||'—'}</div>
+      <div class="shoot-checks">
+        <div class="chk-row" onclick="toggleShootCheck('${s.id}','hardDone')"><div class="chk-box ${hd?'checked':''}"></div><div class="chk-lbl">Загрузил на хард</div></div>
+        <div class="chk-row" onclick="toggleShootCheck('${s.id}','backupDone')"><div class="chk-box ${bd?'checked':''}"></div><div class="chk-lbl">Бэкап на облако</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleShootCheck(sid,field){
+  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
+  const s=(f.shootings||[]).find(x=>x.id===sid);if(!s)return;
+  s[field]=!s[field];sv(data);renderPanelShoots(f);
+}
+function closePanel(id){
+  document.getElementById(id).classList.remove('open');
+  if(id==='panel-flash'){curFid=null;renderFlashList();}
+}
+function openPanel(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='panel-inwork') renderInWorkPanel();
+  if(id==='panel-completed') renderCompletedList();
+}
+
+function openAddToFlash(){
+  const data=db(),evs=data.events;
+  document.getElementById('atf-manual').style.display='none';
+  document.getElementById('atf-manual-btn').textContent='+ Добавить свою';
+  ['fm-name','fm-date','fm-deadline'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const el=document.getElementById('add-to-flash-list');
+  el.innerHTML=evs.length?evs.map(ev=>`<div class="pull-item">
+    <div class="pull-item-name">${ev.type?'['+ev.type+'] ':''}${ev.clientName||'Без имени'}</div>
+    <div class="pull-item-meta">📅 ${ev.date||'—'}${ev.time?' · ⏰ '+ev.time:''}</div>
+    <div class="pull-deadline-row"><input class="fld-inp" type="date" id="afd-${ev.id}" placeholder="Дедлайн"><button class="btn-pull-add" onclick="addEvToFlash('${ev.id}')">Добавить</button></div>
+  </div>`).join(''):'<div class="no-items" style="margin-bottom:8px">Нет съёмок в календаре</div>';
+  openSheet('sh-add-to-flash');
+}
+function toggleAtfManual(){
+  const m=document.getElementById('atf-manual'),btn=document.getElementById('atf-manual-btn');
+  const shown=m.style.display!=='none';
+  m.style.display=shown?'none':'block';btn.textContent=shown?'+ Добавить свою':'Скрыть';
+}
+function addEvToFlash(evId){
+  const data=db(),ev=data.events.find(e=>e.id===evId),f=data.flashes.find(x=>x.id===curFid);
+  if(!ev||!f)return;if(!f.shootings)f.shootings=[];
+  f.shootings.push({id:uid(),name:(ev.type?'['+ev.type+'] ':'')+( ev.clientName||'Без имени'),date:ev.date||'',deadline:(document.getElementById('afd-'+evId)||{}).value||'',calEvId:evId});
+  updMarker(f);sv(data);closeSheet('sh-add-to-flash');renderFlashPanel();
+}
+function saveManualFlashShoot(){
+  const name=document.getElementById('fm-name').value.trim();if(!name)return;
+  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
+  if(!f.shootings)f.shootings=[];
+  f.shootings.push({id:uid(),name,date:document.getElementById('fm-date').value,deadline:document.getElementById('fm-deadline').value});
+  updMarker(f);sv(data);closeSheet('sh-add-to-flash');renderFlashPanel();
+}
+function rmShoot(sid){
+  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
+  f.shootings=(f.shootings||[]).filter(s=>s.id!==sid);updMarker(f);sv(data);renderFlashPanel();
+}
+function doErase(){showConfirm('Стереть съёмки?','Все съёмки с флешки будут удалены.',()=>{
+  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
+  f.shootings=[];updMarker(f);sv(data);renderFlashPanel();
+});}
+function doDeleteFlash(){showConfirm('Удалить флешку?','Карточка будет удалена.',()=>{
+  const data=db();data.flashes=data.flashes.filter(f=>f.id!==curFid);sv(data);closePanel('panel-flash');
+});}
+function updMarker(f){f.marker=(f.shootings&&f.shootings.length)?'red':'green';}
+
+/* ═══ FLASH FORM ═══ */
+function fabFlashClick(){
+  editMode=false;nfState={name:'',size:'64',colorHex:'#374151',brand:''};
+  document.getElementById('sh-flash-title').textContent='Новая флешка';
+  document.getElementById('nf-btn').textContent='Добавить';
+  document.getElementById('nf-name').value='';
+  renderNFForm();openSheet('sh-flash');
+}
+function openEditFlash(){
+  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
+  editMode=true;nfState={name:f.name||'',size:f.size||'64',colorHex:f.colorHex||'#374151',brand:f.brand||''};
+  document.getElementById('sh-flash-title').textContent='Параметры флешки';
+  document.getElementById('nf-btn').textContent='Сохранить';
+  document.getElementById('nf-name').value=nfState.name;
+  renderNFForm();openSheet('sh-flash');
+}
+function renderNFForm(){
+  document.getElementById('nf-size').innerHTML=SIZES.map(s=>`<div class="chip ${nfState.size===s?'on':''}" onclick="setNF('size','${s}',this,'nf-size')">${s} GB</div>`).join('');
+  document.getElementById('nf-color').innerHTML=COLORS.map(c=>`<div class="cswatch ${nfState.colorHex===c.hex?'on':''}" style="background:${c.hex}" title="${c.name}" onclick="setNFColor('${c.hex}',this)"></div>`).join('');
+  document.getElementById('nf-brand').innerHTML=BRANDS.map(b=>`<div class="chip ${nfState.brand===b?'on':''}" onclick="setNF('brand','${b}',this,'nf-brand')">${b}</div>`).join('');
+}
+function setNF(k,v,el,gid){nfState[k]=v;document.querySelectorAll('#'+gid+' .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+function setNFColor(hex,el){nfState.colorHex=hex;document.querySelectorAll('#nf-color .cswatch').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+function saveFlash(){
+  nfState.name=document.getElementById('nf-name').value.trim();
+  const data=db();
+  if(editMode){const f=data.flashes.find(x=>x.id===curFid);if(f)Object.assign(f,{name:nfState.name,size:nfState.size,colorHex:nfState.colorHex,brand:nfState.brand});}
+  else data.flashes.push({id:uid(),name:nfState.name||'Флешка',size:nfState.size,colorHex:nfState.colorHex,brand:nfState.brand,marker:'green',shootings:[]});
+  sv(data);closeSheet('sh-flash');if(editMode)renderFlashPanel();renderFlashList();
+}
+
+/* ═══ SHEETS + CONFIRM ═══ */
+function openSheet(id){document.getElementById(id).classList.add('open');}
+function closeSheet(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s)s.classList.remove('open');}));
+let confCb=null;
+function showConfirm(t,m,cb){
+  document.getElementById('conf-title').textContent=t;
+  document.getElementById('conf-msg').textContent=m;
+  confCb=cb;document.getElementById('confirm').classList.add('open');
+}
+function closeConfirm(){document.getElementById('confirm').classList.remove('open');confCb=null;}
+document.getElementById('conf-ok').onclick=()=>{if(confCb)confCb();closeConfirm();};
+
+/* ═══ INIT ═══ */
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+initDragDrop();
+switchTab('calendar');
+checkMorning();
+</script>
+</body>
+</html>
