@@ -313,7 +313,7 @@ body{
 .cal-grid.in-right{transform:translateX(-110%);opacity:0;transition:none}
 .cal-grid.settled{transform:translateX(0);opacity:1}
 
-/* Исправленные, железобетонно ровные обводки и слои ячеек */
+/* Железобетонно ровные обводки ячеек */
 .cal-cell{
   aspect-ratio:1;border-radius:10px;
   display:flex;align-items:center;justify-content:center;
@@ -325,23 +325,16 @@ body{
 .cal-cell.empty{cursor:default;background:transparent!important;border:none!important;box-shadow:none!important}
 .cal-cell.today{background:var(--red)!important;color:#fff!important;font-weight:800;}
 
-/* Настоящий жирный крест на весь квадрат выходного */
+/* Полноразмерный жирный крест выходного дня */
 .cal-cell.has-holiday::before, .cal-cell.has-holiday::after {
-  content:'';position:absolute;width:83%;height:3px;background:var(--red);border-radius:2px;z-index:5;
+  content:'';position:absolute;width:80%;height:3px;background:var(--red);border-radius:2px;z-index:5;
 }
 .cal-cell.has-holiday::before { transform: rotate(45deg); }
 .cal-cell.has-holiday::after { transform: rotate(-45deg); }
 
-/* Обводки и независимые цветные уголки поверх всего (даже поверх красного «Сегодня») */
-.cal-cell::slide-corner {
-  content:'';position:absolute;top:0;left:0;width:100%;height:100%;
-  border-radius:8px;pointer-events:none;z-index:10;
-}
-.cal-cell.has-shoot::slide-corner {
-  background:linear-gradient(135deg, var(--shoot-color, #ff9500) 26%, transparent 28%);
-}
-.cal-cell.has-deadline::slide-corner {
-  background:linear-gradient(135deg, var(--shoot-color, #ff9500) 26%, transparent 28%);
+/* Выделенные слои уголков поверх фонов */
+.cal-cell-corner {
+  position:absolute;inset:0;border-radius:8px;pointer-events:none;z-index:10;
 }
 
 .day-tip{
@@ -430,16 +423,65 @@ body{
 }
 .btn-completed-toggle .ct-arr{margin-left:auto}
 
+/* Изолированные, чистые стили для карточек в Завершённых */
 .done-card{
-  background:rgba(255,255,255,.06);border-radius:14px;padding:14px;
-  border:1px solid rgba(255,255,255,.1);margin-bottom:8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.done-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.done-card-info{flex:1}
-.done-card-name{font-size:14px;font-weight:800;color:#fff}
-.done-card-meta{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
-.done-card-top .btn-back-stage{background:rgba(255,255,255,.1);color:#fff;font-size:12px;width:auto;padding:6px 12px;height:auto}
-.done-card-top .btn-done-del{background:none;border:none;color:var(--red);font-size:22px;cursor:pointer;margin-left:12px;line-height:1}
+.done-card-top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.done-card-info{
+  flex: 1;
+  min-width: 0;
+}
+.done-card-name{
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.done-card-meta{
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 3px;
+}
+.done-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.done-card-actions .btn-back-stage {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  width: auto;
+  height: auto;
+}
+.done-card-actions .btn-done-del {
+  background: none;
+  border: none;
+  color: var(--red);
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
 
 .panel{
   position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
@@ -818,7 +860,6 @@ const COLORS=[
   {name:'Белый',hex:'#e5e7eb'},
 ];
 
-// Палитра из 12 крутых пастельных оттенков (без ядовитых цветов)
 const PROJECT_COLORS=[
   '#AEC6CF', '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BFFCC6', '#C7CEEA',
   '#FFC6FF', '#E8AEB7', '#D8E2DC', '#FFE5D9', '#ECE4DB', '#B9FBC0'
@@ -958,7 +999,6 @@ function renderStatusStrip(){
   const inWork=data.events.filter(e=>(e.stage||0)===1);
   if(inWork.length) pills.push({txt:`В работе: ${inWork.length} съёмк${inWork.length===1?'а':'и'}`, cls:''});
 
-  // Логика вывода Аренды: если активна завтра — выводим «Аренда (завтра)»
   const rents=data.rents||[];
   const hasTodayRent = rents.some(r=>r.date === TDS);
   const hasTomorrowRent = rents.some(r=>r.date === tomorrowStr);
@@ -1061,27 +1101,24 @@ function buildGrid(){
   (data.events||[]).forEach(ev=>{
     if(!ev.date) return;
     const st = ev.stage || 0;
-    
-    // Если статус "Готово" (3) — удаляем из календаря (но оставляем под ним)
-    if(st >= 3) return;
+    if(st >= 4) return; // Убрано окончательно из календаря
 
     shootsMap[ev.date] = ev.color||PROJECT_COLORS[0];
     
-    // Логика обводок на основе статусов съёмки
     if(st === 0) {
-      borderMap[ev.date] = ev.color || PROJECT_COLORS[0]; // Обычная обводка цвета проекта
+      borderMap[ev.date] = ev.color || PROJECT_COLORS[0];
     } else if(st === 1) {
-      borderMap[ev.date] = '#ff9500'; // Монтаж -> Желтая/Оранжевая обводка (даже поверх красного)
+      borderMap[ev.date] = '#ff9500'; // Монтаж -> Желтая/Оранжевая обводка ячейки
     } else if(st === 2) {
-      borderMap[ev.date] = '#34c759'; // Утверждение -> Зеленая обводка
+      borderMap[ev.date] = '#34c759'; // Утверждение -> Зеленая обводка ячейки
     }
 
     if(ev.deadline) {
       deadlinesMap[ev.deadline] = ev.color||PROJECT_COLORS[0];
       if(st === 2) {
-        borderMap[ev.deadline] = '#34c759'; // Утверждение дедлайна -> Зеленый
+        borderMap[ev.deadline] = '#34c759';
       } else {
-        borderMap[ev.deadline] = '#000000'; // Обычный дедлайн -> Черная обводка клетки
+        borderMap[ev.deadline] = '#000000';
       }
     }
   });
@@ -1105,7 +1142,6 @@ function buildGrid(){
       c.style.setProperty('border-color', 'var(--blue)', 'important');
     }
 
-    // Рендерим независимый слой уголка, чтобы он ложился поверх красного фона «Сегодня»
     if(shootsMap[ds] || deadlinesMap[ds]) {
       const targetColor = shootsMap[ds] || deadlinesMap[ds];
       const corner = document.createElement('div');
@@ -1118,7 +1154,6 @@ function buildGrid(){
       c.appendChild(corner);
     }
 
-    // Применяем кастомные динамические обводки статусов
     if(borderMap[ds]) {
       c.style.border = `2px solid ${borderMap[ds]}`;
     }
@@ -1155,8 +1190,8 @@ function onDayAddBtn(){
 function showTip(ds,cell){
   hideTip(); window._tapDs=ds;
   const data=db();
-  const evs=data.events.filter(e=>e.date===ds && (e.stage||0)<3);
-  const dls=data.events.filter(e=>e.deadline===ds&&(e.stage||0)<3);
+  const evs=data.events.filter(e=>e.date===ds && (e.stage||0)<4);
+  const dls=data.events.filter(e=>e.deadline===ds&&(e.stage||0)<4);
   const rnts=(data.rents||[]).filter(r=>r.date===ds);
   const isHoli=(data.holidays||[]).includes(ds);
   
@@ -1300,11 +1335,10 @@ function renderEvSection(data){
   if(!sec) return;
   const allEvs=data.events||[];
   
-  // В основном календаре отображаются только активные съёмки (или те, у которых статус "Готово", но они еще под календарем)
   if(!allEvs.length){sec.innerHTML='<div style="color:rgba(255,255,255,.35);font-size:13px;padding:14px 0 0">Нет съёмок</div>';return;}
 
   const active = allEvs.filter(e=>(e.stage||0)<3);
-  const doneButUnderCalendar = allEvs.filter(e=>(e.stage||0)===3); // Статус Готово, но еще не удалены окончательно
+  const doneButUnderCalendar = allEvs.filter(e=>(e.stage||0)===3);
 
   const groups={today:[],tomorrow:[],week:[],later:{}};
   const tDate=new Date(TDS+'T00:00');
@@ -1331,7 +1365,6 @@ function renderEvSection(data){
   html+=renderGroup('Ближайшие',groups.week);
   Object.entries(groups.later).forEach(([k,v])=>{ html+=renderGroup(k,v); });
 
-  // Отображаем съёмки со статусом "Готово" под календарем полупрозрачными
   if(doneButUnderCalendar.length){
     html+=`<div class="ev-group-label" style="color:rgba(255,255,255,.25)">Готово (под календарем)</div>`;
     html+=doneButUnderCalendar.map(ev=>evCard(ev, true)).join('');
@@ -1356,7 +1389,6 @@ function evCard(ev, isSemiTransparent = false){
   }
   const lnk=ev.link?`<a href="${ev.link}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,59,48,.12);color:#ff3b30;font-family:Raleway,sans-serif;font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;text-decoration:none;margin-top:6px">Перейти →</a>`:'';
 
-  // Если карточка со статусом "Готово" под календарем, либо пользователь нажимает крестик для удаления
   if(isSemiTransparent){
     return `<div class="ev-card" style="opacity:.4">
       <div class="ev-card-top">
@@ -1391,17 +1423,31 @@ function evCard(ev, isSemiTransparent = false){
   </div>`;
 }
 
+function advStage(id){
+  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
+  ev.stage=(ev.stage||0)+1;
+  sv(data); buildGrid();
+  if(curTab==='shoots') renderShootsList();
+}
+function backStage(id){
+  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
+  ev.stage=Math.max(0,(ev.stage||0)-1);
+  sv(data); buildGrid();
+  if(curTab==='shoots') renderShootsList();
+}
+
 function moveToCompleted(id) {
-  showConfirm('Перенести в завершённые?','Съёмка будет окончательно удалена из под календаря и перенесена в раздел Завершённые.',()=>{
+  showConfirm('Перенести в завершённые?','Съёмка будет удалена под календарем и сохранена в архив.',()=>{
     const data=db();
     const evIndex = data.events.findIndex(e=>e.id===id);
     if(evIndex !== -1) {
       const ev = data.events[evIndex];
       if(!data.deleted) data.deleted = [];
-      ev.stage = 4; // Окончательный статус архивации
+      ev.stage = 4;
       data.deleted.push(ev);
       data.events.splice(evIndex, 1);
       sv(data); buildGrid();
+      if(curTab==='shoots') renderShootsList();
     }
   });
 }
@@ -1525,8 +1571,10 @@ function renderCompletedList(data) {
           <div class="done-card-name">${typeStr}${ev.clientName||'Без имени'}</div>
           <div class="done-card-meta">${ev.date||'—'}</div>
         </div>
-        <button class="btn-back-stage" onclick="restoreFromCompleted('${ev.id}')">Вернуть</button>
-        <button class="btn-done-del" onclick="permanentlyDelete('${ev.id}')">×</button>
+        <div class="done-card-actions">
+          <button class="btn-back-stage" onclick="restoreFromCompleted('${ev.id}')">Вернуть</button>
+          <button class="btn-done-del" onclick="permanentlyDelete('${ev.id}')">×</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1537,7 +1585,8 @@ function restoreFromCompleted(id) {
   const index = (data.deleted||[]).findIndex(e=>e.id===id);
   if(index !== -1) {
     const ev = data.deleted[index];
-    ev.stage = 0; // Сбрасываем статус на новый проект
+    ev.stage = 0;
+    if(!data.events) data.events = [];
     data.events.push(ev);
     data.deleted.splice(index, 1);
     sv(data); buildGrid(); renderCompletedList(data);
@@ -1689,7 +1738,7 @@ function fabFlashClick(){
 }
 function openEditFlash(){
   const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
-  editMode=true;nfState={name:f.name||'',size:f.size||'64',colorHex:f.colorHex||'#374151',brand:f.brand||''};
+  editMode=true;nfState={name:f.name||'',size:f.size||'64',colorHex:'#374151',brand:f.brand||''};
   document.getElementById('sh-flash-title').textContent='Параметры флешки';
   document.getElementById('nf-btn').textContent='Сохранить';
   document.getElementById('nf-name').value=nfState.name;
