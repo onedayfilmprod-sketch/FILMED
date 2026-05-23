@@ -313,30 +313,35 @@ body{
 .cal-grid.in-right{transform:translateX(-110%);opacity:0;transition:none}
 .cal-grid.settled{transform:translateX(0);opacity:1}
 
-/* Исправленные и ровные обводки ячеек */
+/* Исправленные, железобетонно ровные обводки и слои ячеек */
 .cal-cell{
   aspect-ratio:1;border-radius:10px;
   display:flex;align-items:center;justify-content:center;
-  font-size:15px;font-weight:500;cursor:pointer;
-  border:2px solid transparent;transition:all .1s;
+  font-size:15px;font-weight:600;cursor:pointer;
   color:var(--text);background:transparent;user-select:none;
   font-family:'Raleway',sans-serif;position:relative;
+  border:2px solid transparent;
 }
 .cal-cell.empty{cursor:default;background:transparent!important;border:none!important;box-shadow:none!important}
-.cal-cell.today{background:var(--red)!important;color:#fff!important;font-weight:800;border-color:transparent!important}
+.cal-cell.today{background:var(--red)!important;color:#fff!important;font-weight:800;}
 
-.cal-cell.has-holiday::before{
-  content:'×';position:absolute;font-size:20px;color:var(--red);font-weight:300;
+/* Настоящий жирный крест на весь квадрат выходного */
+.cal-cell.has-holiday::before, .cal-cell.has-holiday::after {
+  content:'';position:absolute;width:83%;height:3px;background:var(--red);border-radius:2px;z-index:5;
 }
-.cal-cell.has-rent{
-  border: 2px solid var(--blue)!important;
+.cal-cell.has-holiday::before { transform: rotate(45deg); }
+.cal-cell.has-holiday::after { transform: rotate(-45deg); }
+
+/* Обводки и независимые цветные уголки поверх всего (даже поверх красного «Сегодня») */
+.cal-cell::slide-corner {
+  content:'';position:absolute;top:0;left:0;width:100%;height:100%;
+  border-radius:8px;pointer-events:none;z-index:10;
 }
-.cal-cell.has-shoot{
-  background:linear-gradient(135deg, var(--shoot-color, var(--orange)) 30%, transparent 32%);
+.cal-cell.has-shoot::slide-corner {
+  background:linear-gradient(135deg, var(--shoot-color, #ff9500) 26%, transparent 28%);
 }
-.cal-cell.has-deadline{
-  border: 2px solid #000000!important;
-  background:linear-gradient(135deg, var(--shoot-color, var(--orange)) 30%, transparent 32%);
+.cal-cell.has-deadline::slide-corner {
+  background:linear-gradient(135deg, var(--shoot-color, #ff9500) 26%, transparent 28%);
 }
 
 .day-tip{
@@ -382,7 +387,7 @@ body{
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 
-.flash-section,.shoots-section{padding:16px}
+.flash-section{padding:16px}
 .flash-list,.shoots-list{display:flex;flex-direction:column;gap:8px}
 .flash-card{
   background:rgba(255,255,255,.10);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
@@ -772,7 +777,7 @@ body{
     <div class="fld"><div class="fld-lbl">Дедлайн (необязательно)</div><input class="fld-inp" id="ev-deadline" type="date"></div>
     
     <div class="fld">
-      <div class="fld-lbl">Цвет проекта (Обязательно)</div>
+      <div class="fld-lbl">Пастельный цвет проекта (Обязательно)</div>
       <div class="color-row" id="ev-color-selector"></div>
     </div>
 
@@ -812,9 +817,13 @@ const COLORS=[
   {name:'Оранжевый',hex:'#ff9500'},{name:'Жёлтый',hex:'#ffcc00'},
   {name:'Белый',hex:'#e5e7eb'},
 ];
+
+// Палитра из 12 крутых пастельных оттенков (без ядовитых цветов)
 const PROJECT_COLORS=[
-  '#ff3b30','#ff9500','#ffcc00','#34c759','#5ac8fa','#007aff','#5856d6','#af52de','#e5e7eb','#374151'
+  '#AEC6CF', '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BFFCC6', '#C7CEEA',
+  '#FFC6FF', '#E8AEB7', '#D8E2DC', '#FFE5D9', '#ECE4DB', '#B9FBC0'
 ];
+
 const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const WDS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const STAGE_INFO=[
@@ -830,7 +839,7 @@ const FONTS=[
 const BG_IMGS=['bg1.JPG','bg2.JPG','bg3.JPG','bg4.JPG','bg5.JPG'];
 const DB_KEY='_db_v2';
 
-function db(){return JSON.parse(localStorage.getItem(DB_KEY)||'{"events":[],"flashes":[],"holidays":[],"rents":[]}')}
+function db(){return JSON.parse(localStorage.getItem(DB_KEY)||'{"events":[],"flashes":[],"holidays":[],"rents":[],"deleted":[]}')}
 function sv(d){
   localStorage.setItem(DB_KEY,JSON.stringify(d));
   if(window._fbSave) window._fbSave(d);
@@ -949,9 +958,16 @@ function renderStatusStrip(){
   const inWork=data.events.filter(e=>(e.stage||0)===1);
   if(inWork.length) pills.push({txt:`В работе: ${inWork.length} съёмк${inWork.length===1?'а':'и'}`, cls:''});
 
+  // Логика вывода Аренды: если активна завтра — выводим «Аренда (завтра)»
   const rents=data.rents||[];
-  const hasActiveRent = rents.some(r=>r.date >= TDS);
-  if(hasActiveRent) pills.push({txt:'Аренда', cls:'blue-pill'});
+  const hasTodayRent = rents.some(r=>r.date === TDS);
+  const hasTomorrowRent = rents.some(r=>r.date === tomorrowStr);
+  
+  if(hasTodayRent) {
+    pills.push({txt:'Аренда', cls:'blue-pill'});
+  } else if(hasTomorrowRent) {
+    pills.push({txt:'Аренда (завтра)', cls:'blue-pill'});
+  }
 
   const todayDl=data.events.filter(e=>e.deadline===TDS&&(e.stage||0)<3);
   const tomorrowDl=data.events.filter(e=>e.deadline===tomorrowStr&&(e.stage||0)<3);
@@ -1040,11 +1056,33 @@ function buildGrid(){
 
   const shootsMap={};
   const deadlinesMap={};
+  const borderMap={};
+
   (data.events||[]).forEach(ev=>{
-    if(!ev.date || (ev.stage||0) >= 3) return;
-    shootsMap[ev.date] = ev.color||'#ff9500';
+    if(!ev.date) return;
+    const st = ev.stage || 0;
+    
+    // Если статус "Готово" (3) — удаляем из календаря (но оставляем под ним)
+    if(st >= 3) return;
+
+    shootsMap[ev.date] = ev.color||PROJECT_COLORS[0];
+    
+    // Логика обводок на основе статусов съёмки
+    if(st === 0) {
+      borderMap[ev.date] = ev.color || PROJECT_COLORS[0]; // Обычная обводка цвета проекта
+    } else if(st === 1) {
+      borderMap[ev.date] = '#ff9500'; // Монтаж -> Желтая/Оранжевая обводка (даже поверх красного)
+    } else if(st === 2) {
+      borderMap[ev.date] = '#34c759'; // Утверждение -> Зеленая обводка
+    }
+
     if(ev.deadline) {
-      deadlinesMap[ev.deadline] = ev.color||'#ff9500';
+      deadlinesMap[ev.deadline] = ev.color||PROJECT_COLORS[0];
+      if(st === 2) {
+        borderMap[ev.deadline] = '#34c759'; // Утверждение дедлайна -> Зеленый
+      } else {
+        borderMap[ev.deadline] = '#000000'; // Обычный дедлайн -> Черная обводка клетки
+      }
     }
   });
 
@@ -1064,15 +1102,25 @@ function buildGrid(){
       c.classList.add('has-holiday');
     }
     if(rentSet.has(ds)) {
-      c.classList.add('has-rent');
+      c.style.setProperty('border-color', 'var(--blue)', 'important');
     }
-    if(shootsMap[ds]) {
-      c.classList.add('has-shoot');
-      c.style.setProperty('--shoot-color', shootsMap[ds]);
+
+    // Рендерим независимый слой уголка, чтобы он ложился поверх красного фона «Сегодня»
+    if(shootsMap[ds] || deadlinesMap[ds]) {
+      const targetColor = shootsMap[ds] || deadlinesMap[ds];
+      const corner = document.createElement('div');
+      corner.className = 'cal-cell-corner';
+      corner.style.position = 'absolute';
+      corner.style.inset = '0';
+      corner.style.borderRadius = '8px';
+      corner.style.pointerEvents = 'none';
+      corner.style.background = `linear-gradient(135deg, ${targetColor} 26%, transparent 28%)`;
+      c.appendChild(corner);
     }
-    if(deadlinesMap[ds]) {
-      c.classList.add('has-deadline');
-      c.style.setProperty('--shoot-color', deadlinesMap[ds]);
+
+    // Применяем кастомные динамические обводки статусов
+    if(borderMap[ds]) {
+      c.style.border = `2px solid ${borderMap[ds]}`;
     }
 
     c.addEventListener('click',()=>handleCellTap(ds,c));
@@ -1107,7 +1155,7 @@ function onDayAddBtn(){
 function showTip(ds,cell){
   hideTip(); window._tapDs=ds;
   const data=db();
-  const evs=data.events.filter(e=>e.date===ds);
+  const evs=data.events.filter(e=>e.date===ds && (e.stage||0)<3);
   const dls=data.events.filter(e=>e.deadline===ds&&(e.stage||0)<3);
   const rnts=(data.rents||[]).filter(r=>r.date===ds);
   const isHoli=(data.holidays||[]).includes(ds);
@@ -1251,13 +1299,16 @@ function renderEvSection(data){
   const sec=document.getElementById('ev-section');
   if(!sec) return;
   const allEvs=data.events||[];
+  
+  // В основном календаре отображаются только активные съёмки (или те, у которых статус "Готово", но они еще под календарем)
   if(!allEvs.length){sec.innerHTML='<div style="color:rgba(255,255,255,.35);font-size:13px;padding:14px 0 0">Нет съёмок</div>';return;}
 
-  const active=allEvs.filter(e=>(e.stage||0)<3);
-  const done=allEvs.filter(e=>(e.stage||0)>=3);
+  const active = allEvs.filter(e=>(e.stage||0)<3);
+  const doneButUnderCalendar = allEvs.filter(e=>(e.stage||0)===3); // Статус Готово, но еще не удалены окончательно
 
   const groups={today:[],tomorrow:[],week:[],later:{}};
   const tDate=new Date(TDS+'T00:00');
+  
   active.forEach(ev=>{
     if(!ev.date){groups.later['Без даты']=groups.later['Без даты']||[];groups.later['Без даты'].push(ev);return;}
     const d=Math.round((new Date(ev.date+'T00:00')-tDate)/864e5);
@@ -1280,42 +1331,44 @@ function renderEvSection(data){
   html+=renderGroup('Ближайшие',groups.week);
   Object.entries(groups.later).forEach(([k,v])=>{ html+=renderGroup(k,v); });
 
-  if(done.length){
-    html+=`<div class="ev-group-label" style="color:rgba(255,255,255,.25)">Завершённые</div>`;
-    html+=done.map(ev=>evCard(ev)).join('');
+  // Отображаем съёмки со статусом "Готово" под календарем полупрозрачными
+  if(doneButUnderCalendar.length){
+    html+=`<div class="ev-group-label" style="color:rgba(255,255,255,.25)">Готово (под календарем)</div>`;
+    html+=doneButUnderCalendar.map(ev=>evCard(ev, true)).join('');
   }
   sec.innerHTML=html;
 }
 
-function evCard(ev){
-  const st=ev.stage||0, isDone=st>=3;
+function evCard(ev, isSemiTransparent = false){
+  const st=ev.stage||0;
   const info=STAGE_INFO[Math.min(st,2)];
   const typeStr=ev.type?`[${ev.type}] `:'';
   let meta=ev.date||'—'; if(ev.time) meta+=` · ${ev.time}`; if(ev.phone) meta+=` · ${ev.phone}`;
   
   let workLabelHtml='';
-  if(!isDone && st===1){
+  if(st===1){
     workLabelHtml=`<div class="ev-card-work-lbl">В работе</div>`;
   }
   
   let dlHtml='';
-  if(ev.deadline && !isDone){
+  if(ev.deadline){
     dlHtml=`<div class="ev-card-deadline" style="color:rgba(0,0,0,.4)">⏱ Дедлайн: ${ev.deadline}</div>`;
   }
-  const lnk=ev.link&&!isDone?`<a href="${ev.link}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,59,48,.12);color:#ff3b30;font-family:Raleway,sans-serif;font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;text-decoration:none;margin-top:6px">Перейти →</a>`:'';
+  const lnk=ev.link?`<a href="${ev.link}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,59,48,.12);color:#ff3b30;font-family:Raleway,sans-serif;font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;text-decoration:none;margin-top:6px">Перейти →</a>`:'';
 
-  if(isDone){
-    return `<div class="ev-card" style="opacity:.6">
+  // Если карточка со статусом "Готово" под календарем, либо пользователь нажимает крестик для удаления
+  if(isSemiTransparent){
+    return `<div class="ev-card" style="opacity:.4">
       <div class="ev-card-top">
-        <div class="ev-stage-dot" style="background:#8e8e93"></div>
+        <div class="ev-stage-dot" style="background:#34c759"></div>
         <div class="ev-card-info">
           <div class="ev-card-name" style="text-decoration:line-through">${typeStr}${ev.clientName||'Без имени'}</div>
           <div class="ev-card-meta">${meta}</div>
         </div>
       </div>
       <div class="ev-card-btns">
-        <button class="btn-back-stage" onclick="backStage('${ev.id}')" title="Вернуть" style="width:auto; padding:0 12px;">Вернуть</button>
-        <button class="btn-done-del" onclick="deleteEvent('${ev.id}')">×</button>
+        <button class="btn-back-stage" onclick="backStage('${ev.id}')">Вернуть</button>
+        <button class="btn-del-ev" onclick="moveToCompleted('${ev.id}')">×</button>
       </div>
     </div>`;
   }
@@ -1333,31 +1386,29 @@ function evCard(ev){
       ${st>0?`<button class="btn-back-stage" onclick="backStage('${ev.id}')">◀</button>`:''}
       <button class="btn-stage" style="background:${info.bg};color:${info.color}" onclick="advStage('${ev.id}')">${info.label}</button>
       <button class="btn-edit-ev" onclick="openEditEvent('${ev.id}')">✏️</button>
-      <button class="btn-del-ev" onclick="deleteEvent('${ev.id}')">×</button>
+      <button class="btn-del-ev" onclick="moveToCompleted('${ev.id}')">×</button>
     </div>
   </div>`;
 }
 
-function advStage(id){
-  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
-  ev.stage=(ev.stage||0)+1;sv(data);buildGrid();
-  if(curTab==='shoots') renderShootsList();
-}
-function backStage(id){
-  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
-  ev.stage=Math.max(0,(ev.stage||0)-1);sv(data);buildGrid();
-  if(curTab==='shoots') renderShootsList();
-}
-function deleteEvent(id){
-  showConfirm('Удалить съёмку?','Съёмка будет удалена.',()=>{
-    const data=db();data.events=data.events.filter(e=>e.id!==id);sv(data);buildGrid();
-    if(curTab==='shoots') renderShootsList();
+function moveToCompleted(id) {
+  showConfirm('Перенести в завершённые?','Съёмка будет окончательно удалена из под календаря и перенесена в раздел Завершённые.',()=>{
+    const data=db();
+    const evIndex = data.events.findIndex(e=>e.id===id);
+    if(evIndex !== -1) {
+      const ev = data.events[evIndex];
+      if(!data.deleted) data.deleted = [];
+      ev.stage = 4; // Окончательный статус архивации
+      data.deleted.push(ev);
+      data.events.splice(evIndex, 1);
+      sv(data); buildGrid();
+    }
   });
 }
 
 function openAddEvent(date){
   evEditId=null;evType='';evExtras=[];editMode=false;
-  selectedProjectColor = PROJECT_COLORS[0]; // Первое значение по умолчанию
+  selectedProjectColor = PROJECT_COLORS[0];
   document.getElementById('sh-event-title').textContent='Новая съёмка';
   ['ev-name','ev-time','ev-phone','ev-link','ev-deadline'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ev-date').value=date||'';
@@ -1397,7 +1448,6 @@ function renderEvExtras(){
 function addEvExtra(){evExtras.push('');renderEvExtras();}
 function rmEvExtra(i){evExtras.splice(i,1);renderEvExtras();}
 
-// Обязательный выбор цвета внутри основной шторки съёмки
 function renderProjectColorSelector(){
   const container = document.getElementById('ev-color-selector');
   container.innerHTML = PROJECT_COLORS.map(c=>`
@@ -1421,7 +1471,7 @@ function saveEvent(){
     time:document.getElementById('ev-time').value,deadline:document.getElementById('ev-deadline').value,
     phone:document.getElementById('ev-phone').value.trim(),link:document.getElementById('ev-link').value.trim(),
     extras:[...evExtras],
-    color: selectedProjectColor // Цвет пишется сразу и без всплывающих окон
+    color: selectedProjectColor
   };
   
   if(editMode){const ev=data.events.find(e=>e.id===evEditId);if(ev)Object.assign(ev,payload);}
@@ -1460,26 +1510,46 @@ function renderShootsList(){
 
 function renderCompletedList(data) {
   if(!data) data=db();
-  const done=(data.events||[]).filter(e=>(e.stage||0)>=3);
+  const completedList = data.deleted || [];
   const list=document.getElementById('completed-list');
   const empty=document.getElementById('completed-empty');
-  if(!done.length){
+  if(!completedList.length){
     list.innerHTML=''; if(empty) empty.style.display='block'; return;
   }
   if(empty) empty.style.display='none';
-  list.innerHTML=done.map(ev=>{
+  list.innerHTML=completedList.map(ev=>{
     const typeStr=ev.type?`[${ev.type}] `:'';
     return `<div class="done-card">
       <div class="done-card-top">
         <div class="done-card-info">
           <div class="done-card-name">${typeStr}${ev.clientName||'Без имени'}</div>
-          <div class="done-card-meta">${ev.date||'—'}${ev.type?' · '+ev.type:''}</div>
+          <div class="done-card-meta">${ev.date||'—'}</div>
         </div>
-        <button class="btn-back-stage" onclick="backStage('${ev.id}');renderCompletedList()">Вернуть</button>
-        <button class="btn-done-del" onclick="deleteEvent('${ev.id}');renderCompletedList()">×</button>
+        <button class="btn-back-stage" onclick="restoreFromCompleted('${ev.id}')">Вернуть</button>
+        <button class="btn-done-del" onclick="permanentlyDelete('${ev.id}')">×</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function restoreFromCompleted(id) {
+  const data=db();
+  const index = (data.deleted||[]).findIndex(e=>e.id===id);
+  if(index !== -1) {
+    const ev = data.deleted[index];
+    ev.stage = 0; // Сбрасываем статус на новый проект
+    data.events.push(ev);
+    data.deleted.splice(index, 1);
+    sv(data); buildGrid(); renderCompletedList(data);
+  }
+}
+
+function permanentlyDelete(id) {
+  showConfirm('Удалить навсегда?','Запись будет безвозвратно стёрта.',()=>{
+    const data=db();
+    data.deleted = (data.deleted||[]).filter(e=>e.id!==id);
+    sv(data); renderCompletedList(data);
+  });
 }
 
 function openNotes(evId){
