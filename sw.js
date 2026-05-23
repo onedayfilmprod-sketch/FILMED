@@ -1,4 +1,4 @@
-const CACHE = 'snimki-v5';
+const CACHE = 'snimki-v6';
 const ASSETS = [
   './index.html',
   './manifest.json',
