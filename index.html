@@ -113,7 +113,7 @@ function renderAuthUI(user){
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{height:100%}
 body{
-  font-family:'Raleway',,-apple-system,sans-serif;
+  font-family:'Raleway',-apple-system,sans-serif;
   background:#0a0a0a;color:#fff;
   -webkit-font-smoothing:antialiased;
   min-height:100%;
@@ -313,6 +313,7 @@ body{
 .cal-grid.in-right{transform:translateX(-110%);opacity:0;transition:none}
 .cal-grid.settled{transform:translateX(0);opacity:1}
 
+/* Исправленные и ровные обводки ячеек */
 .cal-cell{
   aspect-ratio:1;border-radius:10px;
   display:flex;align-items:center;justify-content:center;
@@ -328,14 +329,14 @@ body{
   content:'×';position:absolute;font-size:20px;color:var(--red);font-weight:300;
 }
 .cal-cell.has-rent{
-  box-shadow:inset 0 0 0 2px var(--blue);
+  border: 2px solid var(--blue)!important;
 }
 .cal-cell.has-shoot{
-  background:linear-gradient(135deg, var(--shoot-color, var(--orange)) 28%, transparent 29%);
+  background:linear-gradient(135deg, var(--shoot-color, var(--orange)) 30%, transparent 32%);
 }
 .cal-cell.has-deadline{
-  box-shadow:inset 0 0 0 2px #000;
-  background:linear-gradient(135deg, var(--shoot-color, var(--orange)) 28%, transparent 29%);
+  border: 2px solid #000000!important;
+  background:linear-gradient(135deg, var(--shoot-color, var(--orange)) 30%, transparent 32%);
 }
 
 .day-tip{
@@ -712,19 +713,10 @@ body{
   <div class="sheet-in" style="height:auto; max-height:45vh; padding-bottom:32px;">
     <div class="handle"></div>
     <div class="sh-title" id="sh-action-title">Выберите действие</div>
-    <button class="btn-prim" style="margin-bottom:10px; background:var(--orange)" onclick="selectActionType('shoot')">🎬 Сьёмка</button>
+    <button class="btn-prim" style="margin-bottom:10px; background:var(--orange)" onclick="selectActionType('shoot')">🎬 Съёмка</button>
     <button class="btn-prim" style="margin-bottom:10px; background:var(--red)" onclick="selectActionType('holiday')">❌ Выходной</button>
     <button class="btn-prim" style="margin-bottom:10px; background:var(--blue)" onclick="selectActionType('rent')">📦 Аренда</button>
     <button class="btn-sec" onclick="closeSheet('sh-action-select')">Отмена</button>
-  </div>
-</div>
-
-<div class="sheet" id="sh-color-select">
-  <div class="sheet-in" style="height:auto; max-height:40vh; padding-bottom:32px;">
-    <div class="handle"></div>
-    <div class="sh-title">Выберите цвет проекта</div>
-    <div class="color-row" id="project-color-palette" style="justify-content:center; gap:14px; padding:10px 0 20px;"></div>
-    <button class="btn-prim" onclick="confirmProjectColor()">Готово</button>
   </div>
 </div>
 
@@ -778,11 +770,17 @@ body{
     <div class="fld"><div class="fld-lbl">Дата съёмки</div><input class="fld-inp" id="ev-date" type="date"></div>
     <div class="fld"><div class="fld-lbl">Время</div><input class="fld-inp" id="ev-time" type="time"></div>
     <div class="fld"><div class="fld-lbl">Дедлайн (необязательно)</div><input class="fld-inp" id="ev-deadline" type="date"></div>
+    
+    <div class="fld">
+      <div class="fld-lbl">Цвет проекта (Обязательно)</div>
+      <div class="color-row" id="ev-color-selector"></div>
+    </div>
+
     <div class="fld"><div class="fld-lbl">Телефон</div><input class="fld-inp" id="ev-phone" type="tel" placeholder="+7"></div>
     <div class="fld"><div class="fld-lbl">Ссылка (соцсети)</div><input class="fld-inp" id="ev-link" type="url" placeholder="https://..."></div>
     <div id="ev-extras"></div>
     <button class="btn-add-ex" onclick="addEvExtra()">＋ Дополнительное поле</button>
-    <button class="btn-prim" onclick="processShootSave()">Сохранить</button>
+    <button class="btn-prim" onclick="saveEvent()">Сохранить</button>
     <button class="btn-sec" onclick="closeSheet('sh-event')">Отмена</button>
   </div>
 </div>
@@ -853,7 +851,6 @@ let curNotesEvId=null;
 let rentEditId=null;
 let rentSelectedTech=[];
 let selectedProjectColor='';
-let temporaryShootPayload=null;
 let targetActionDate='';
 
 let fontIdx=0;
@@ -1318,7 +1315,7 @@ function evCard(ev){
       </div>
       <div class="ev-card-btns">
         <button class="btn-back-stage" onclick="backStage('${ev.id}')" title="Вернуть" style="width:auto; padding:0 12px;">Вернуть</button>
-        <button class="btn-del-ev" onclick="deleteEvent('${ev.id}')">×</button>
+        <button class="btn-done-del" onclick="deleteEvent('${ev.id}')">×</button>
       </div>
     </div>`;
   }
@@ -1359,18 +1356,20 @@ function deleteEvent(id){
 }
 
 function openAddEvent(date){
-  evEditId=null;evType='';evExtras=[];
+  evEditId=null;evType='';evExtras=[];editMode=false;
+  selectedProjectColor = PROJECT_COLORS[0]; // Первое значение по умолчанию
   document.getElementById('sh-event-title').textContent='Новая съёмка';
   ['ev-name','ev-time','ev-phone','ev-link','ev-deadline'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ev-date').value=date||'';
   document.getElementById('ev-custom-type').style.display='none';
   document.getElementById('ev-custom-type').value='';
-  renderEvTypeChips();renderEvExtras();openSheet('sh-event');
+  renderEvTypeChips();renderEvExtras();renderProjectColorSelector();openSheet('sh-event');
 }
 function openEditEvent(id){
   const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
-  evEditId=id;evExtras=[...(ev.extras||[])];
+  evEditId=id;evExtras=[...(ev.extras||[])];editMode=true;
   evType=EV_TYPES.includes(ev.type)?ev.type:ev.type?'Своё':'';
+  selectedProjectColor = ev.color || PROJECT_COLORS[0];
   document.getElementById('sh-event-title').textContent='Редактировать съемку';
   ['ev-name','ev-date','ev-time','ev-deadline','ev-phone','ev-link'].forEach(fid=>{
     const map={'ev-name':ev.clientName,'ev-date':ev.date,'ev-time':ev.time,'ev-deadline':ev.deadline,'ev-phone':ev.phone,'ev-link':ev.link};
@@ -1379,7 +1378,7 @@ function openEditEvent(id){
   const ci=document.getElementById('ev-custom-type');
   ci.style.display=evType==='Своё'?'block':'none';
   ci.value=evType==='Своё'?(ev.type||''):'';
-  renderEvTypeChips();renderEvExtras();openSheet('sh-event');
+  renderEvTypeChips();renderEvExtras();renderProjectColorSelector();openSheet('sh-event');
 }
 function renderEvTypeChips(){
   document.getElementById('ev-type-chips').innerHTML=[...EV_TYPES,'Своё'].map(t=>
@@ -1398,57 +1397,37 @@ function renderEvExtras(){
 function addEvExtra(){evExtras.push('');renderEvExtras();}
 function rmEvExtra(i){evExtras.splice(i,1);renderEvExtras();}
 
-function processShootSave(){
+// Обязательный выбор цвета внутри основной шторки съёмки
+function renderProjectColorSelector(){
+  const container = document.getElementById('ev-color-selector');
+  container.innerHTML = PROJECT_COLORS.map(c=>`
+    <div class="cswatch ${selectedProjectColor===c?'on':''}" style="background:${c}" onclick="setProjectColorHex('${c}', this)"></div>
+  `).join('');
+}
+function setProjectColorHex(c, el){
+  selectedProjectColor = c;
+  document.querySelectorAll('#ev-color-selector .cswatch').forEach(sw=>sw.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function saveEvent(){
   const date=document.getElementById('ev-date').value;if(!date)return;
   let type=evType==='Своё'?document.getElementById('ev-custom-type').value.trim():EV_TYPES.includes(evType)?evType:'';
+  const data=db();
   
-  temporaryShootPayload = {
+  const payload={
     type,
     clientName:document.getElementById('ev-name').value.trim(),date,
     time:document.getElementById('ev-time').value,deadline:document.getElementById('ev-deadline').value,
     phone:document.getElementById('ev-phone').value.trim(),link:document.getElementById('ev-link').value.trim(),
-    extras:[...evExtras]
+    extras:[...evExtras],
+    color: selectedProjectColor // Цвет пишется сразу и без всплывающих окон
   };
   
-  closeSheet('sh-event');
+  if(editMode){const ev=data.events.find(e=>e.id===evEditId);if(ev)Object.assign(ev,payload);}
+  else data.events.push({id:uid(),stage:0,notes:[],...payload});
   
-  if(evEditId){
-    const data=db(); const ev=data.events.find(e=>e.id===evEditId);
-    selectedProjectColor = ev ? (ev.color || PROJECT_COLORS[0]) : PROJECT_COLORS[0];
-  } else {
-    selectedProjectColor = PROJECT_COLORS[0];
-  }
-  
-  setTimeout(()=>{
-    openColorSelectSheet();
-  },350);
-}
-
-function openColorSelectSheet(){
-  const palette = document.getElementById('project-color-palette');
-  palette.innerHTML = PROJECT_COLORS.map(c=>`
-    <div class="cswatch ${selectedProjectColor===c?'on':''}" style="background:${c}" onclick="selectProjectColorHex('${c}', this)"></div>
-  `).join('');
-  openSheet('sh-color-select');
-}
-function selectProjectColorHex(c, el){
-  selectedProjectColor = c;
-  document.querySelectorAll('#project-color-palette .cswatch').forEach(sw=>sw.classList.remove('on'));
-  el.classList.add('on');
-}
-function confirmProjectColor(){
-  closeSheet('sh-color-select');
-  const data=db();
-  if(evEditId){
-    const ev=data.events.find(e=>e.id===evEditId);
-    if(ev){
-      Object.assign(ev, temporaryShootPayload);
-      ev.color = selectedProjectColor;
-    }
-  }else{
-    data.events.push({id:uid(),stage:0,notes:[],color:selectedProjectColor, ...temporaryShootPayload});
-  }
-  sv(data); buildGrid();
+  sv(data);closeSheet('sh-event');buildGrid();
   if(curTab==='shoots') renderShootsList();
 }
 
