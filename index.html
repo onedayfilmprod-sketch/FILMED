@@ -34,7 +34,6 @@ const provider=new GoogleAuthProvider();
 let _unsubscribe=null;
 let _fbUid=null;
 
-// Expose to global scope for use in non-module JS
 window._fbSignIn=async()=>{
   try{await signInWithPopup(auth,provider);}catch(e){console.error(e);}
 };
@@ -45,7 +44,6 @@ window._fbSignOut=async()=>{
   renderAuthUI(null);
 };
 
-// Save data to Firestore
 window._fbSave=async(data)=>{
   if(!_fbUid) return;
   try{
@@ -58,30 +56,22 @@ onAuthStateChanged(auth,async(user)=>{
   if(!user){_fbUid=null;if(_unsubscribe){_unsubscribe();_unsubscribe=null;}return;}
   _fbUid=user.uid;
 
-  // First load from Firestore
   const snap=await getDoc(doc(fsdb,'users',user.uid));
   if(snap.exists()&&snap.data().data){
     try{
       const remote=JSON.parse(snap.data().data);
       localStorage.setItem('_db_v2',JSON.stringify(remote));
-      // Refresh UI
       if(window.buildGrid) window.buildGrid();
       if(window.renderFlashList) window.renderFlashList();
       if(window.renderShootsList) window.renderShootsList();
     }catch(e){}
   }
 
-  // Realtime listener
   if(_unsubscribe) _unsubscribe();
   _unsubscribe=onSnapshot(doc(fsdb,'users',user.uid),snap=>{
     if(!snap.exists()) return;
     try{
       const remote=JSON.parse(snap.data().data||'{}');
-      const local=JSON.parse(localStorage.getItem('_db_v2')||'{}');
-      // Simple merge: remote wins (last write wins)
-      const evCount=(remote.events||[]).length;
-      const localCount=(local.events||[]).length;
-      // Only update if remote differs
       const remoteStr=JSON.stringify(remote);
       const localStr=localStorage.getItem('_db_v2');
       if(remoteStr!==localStr){
@@ -96,16 +86,10 @@ onAuthStateChanged(auth,async(user)=>{
 
 function renderAuthUI(user){
   const btn=document.getElementById('auth-btn');
-  const av=document.getElementById('auth-avatar');
   if(!btn) return;
   if(user){
     btn.onclick=window._fbSignOut;
     btn.title='Выйти';
-    if(av){
-      av.style.display='flex';
-      av.style.backgroundImage=user.photoURL?`url(${user.photoURL})`:'none';
-      av.textContent=user.photoURL?'':( user.displayName||'U')[0].toUpperCase();
-    }
     btn.style.background='rgba(52,199,89,.2)';
     btn.style.color='#34c759';
     btn.innerHTML='<span id="auth-avatar" style="width:22px;height:22px;border-radius:50%;background:'+( user.photoURL?'url('+user.photoURL+') center/cover':'rgba(255,255,255,.2)')+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;overflow:hidden">'+(user.photoURL?`<img src="${user.photoURL}" style="width:100%;height:100%;object-fit:cover">`:(user.displayName||'U')[0].toUpperCase())+'</span>';
@@ -121,7 +105,7 @@ function renderAuthUI(user){
 <style>
 :root{
   --red:#ff3b30;--green:#34c759;--orange:#ff9500;
-  --yellow:#ffcc00;--brown:#a0522d;--blue:#007aff;
+  --yellow:#ffcc00;--blue:#007aff;--lightblue:#5ac8fa;
   --text:#1c1c1e;--muted:#8e8e93;
   --safe-top:env(safe-area-inset-top,44px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
@@ -129,13 +113,12 @@ function renderAuthUI(user){
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{height:100%}
 body{
-  font-family:'Raleway',-apple-system,sans-serif;
+  font-family:'Raleway',,-apple-system,sans-serif;
   background:#0a0a0a;color:#fff;
   -webkit-font-smoothing:antialiased;
   min-height:100%;
 }
 
-/* ── DESKTOP WRAPPER ── */
 .desktop-wrap{
   width:100%;min-height:100vh;
   display:flex;align-items:flex-start;justify-content:center;
@@ -169,7 +152,6 @@ body{
   .bg-layer{position:fixed;}
 }
 
-/* ── BACKGROUND ── */
 .bg-layer{inset:0;z-index:0;background:#0a0a0a}
 .bg-img{
   position:absolute;inset:0;
@@ -180,18 +162,14 @@ body{
 .bg-img.visible{opacity:1}
 .bg-overlay{position:absolute;inset:0;background:rgba(0,0,0,.60);}
 
-/* ── APP SHELL ── */
 .app{
   display:flex;flex-direction:column;
   height:100%;position:relative;z-index:1;
 }
-@media(min-width:600px){
-  .app{min-height:844px;}
-}
+@media(min-width:600px){.app{min-height:844px;}}
 .statusbar-pad{height:var(--safe-top);flex-shrink:0}
 @media(min-width:600px){.statusbar-pad{height:20px}}
 
-/* ── TOPBAR ── */
 .topbar{
   padding:8px 16px 10px;flex-shrink:0;
   border-bottom:1px solid rgba(255,255,255,.08);
@@ -215,12 +193,7 @@ body{
   border-radius:7px;cursor:pointer;transition:all .2s;letter-spacing:.03em;
 }
 .tab.active{background:rgba(255,255,255,.15);color:#fff}
-.tab-badge{
-  display:inline-block;width:7px;height:7px;background:var(--red);
-  border-radius:50%;margin-left:4px;vertical-align:middle;
-}
 
-/* ── STATUS STRIP ── */
 .status-strip{
   display:flex;gap:7px;padding:10px 14px 4px;
   overflow-x:auto;-webkit-overflow-scrolling:touch;
@@ -228,25 +201,21 @@ body{
 }
 .status-strip::-webkit-scrollbar{display:none}
 .status-pill{
-  flex-shrink:0;background:var(--red);color:#fff;
+  flex-shrink:0;background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);
   padding:6px 12px;border-radius:20px;
   font-size:12px;font-weight:700;white-space:nowrap;
   letter-spacing:.02em;
 }
-.status-pill.neutral{background:rgba(255,255,255,.12);color:rgba(255,255,255,.7)}
+.status-pill.blue-pill{background:var(--blue);color:#fff}
 
-/* ── SCROLL ── */
 .scroll{
-  flex:1 1 0;
-  min-height:0;
-  overflow-y:auto;
+  flex:1 1 0;min-height:0;overflow-y:auto;
   -webkit-overflow-scrolling:touch;
   padding-bottom:calc(100px + var(--safe-bottom));
 }
 .section{display:none}
 .section.active{display:block}
 
-/* ── FAB ── */
 .fab{
   position:fixed;bottom:calc(24px + var(--safe-bottom));right:20px;
   width:52px;height:52px;background:var(--red);border:none;
@@ -257,9 +226,7 @@ body{
 }
 .fab:active{transform:scale(.91)}
 .day-add-btn{
-  position:fixed;
-  bottom:calc(24px + var(--safe-bottom));
-  right:20px;
+  position:fixed;bottom:calc(24px + var(--safe-bottom));right:20px;
   transform:translateY(100px);
   width:52px;height:52px;background:var(--red);border:none;
   border-radius:16px;color:#fff;font-size:32px;font-weight:300;
@@ -271,28 +238,22 @@ body{
 .day-add-btn.show{transform:translateY(0);opacity:1;pointer-events:all}
 .day-add-btn:active{transform:scale(.91)}
 
-/* On desktop — constrain to frame */
 @media(min-width:600px){
-  .fab{position:absolute}
-  .day-add-btn{position:absolute}
-  .btn-today{position:absolute}
+  .fab,.day-add-btn,.btn-today{position:absolute}
 }
 
-/* ── TODAY BUTTON ── */
 .btn-today{
   position:fixed;bottom:calc(88px + var(--safe-bottom));left:50%;
   transform:translateX(-50%) translateY(16px);
   background:rgba(255,59,48,.92);
   border:none;color:#fff;padding:9px 20px;border-radius:20px;
   font-family:'Raleway',sans-serif;font-size:13px;font-weight:700;
-  cursor:pointer;z-index:39;
-  opacity:0;pointer-events:none;
+  cursor:pointer;z-index:39;opacity:0;pointer-events:none;
   transition:opacity .28s,transform .28s;
   white-space:nowrap;box-shadow:0 4px 16px rgba(255,59,48,.45);
 }
 .btn-today.show{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0)}
 
-/* ── MORNING POPUP ── */
 .morning-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;
   display:flex;align-items:center;justify-content:center;padding:24px;
@@ -322,7 +283,6 @@ body{
   font-family:'Raleway',sans-serif;font-size:15px;font-weight:800;cursor:pointer;
 }
 
-/* ── CALENDAR ── */
 .cal-outer{padding:10px 14px 0}
 .cal-wrap{
   background:rgba(255,255,255,.84);
@@ -352,24 +312,32 @@ body{
 .cal-grid.in-left{transform:translateX(110%);opacity:0;transition:none}
 .cal-grid.in-right{transform:translateX(-110%);opacity:0;transition:none}
 .cal-grid.settled{transform:translateX(0);opacity:1}
+
 .cal-cell{
   aspect-ratio:1;border-radius:10px;
   display:flex;align-items:center;justify-content:center;
   font-size:15px;font-weight:500;cursor:pointer;
   border:2px solid transparent;transition:all .1s;
   color:var(--text);background:transparent;user-select:none;
-  font-family:'Raleway',sans-serif;
+  font-family:'Raleway',sans-serif;position:relative;
 }
-.cal-cell.empty{cursor:default;background:transparent!important;border:none!important}
+.cal-cell.empty{cursor:default;background:transparent!important;border:none!important;box-shadow:none!important}
 .cal-cell.today{background:var(--red)!important;color:#fff!important;font-weight:800;border-color:transparent!important}
-.cal-cell.stage-new{background:var(--orange)!important;color:#fff!important;font-weight:700;border-color:transparent!important}
-.cal-cell.stage-montage{background:#c9a800!important;color:#fff!important;font-weight:700;border-color:transparent!important}
-.cal-cell.stage-approve{background:var(--green)!important;color:#fff!important;font-weight:700;border-color:transparent!important}
-.cal-cell.deadline-day{background:var(--brown)!important;color:#fff!important;border-color:transparent!important}
-.cal-cell.deadline-day-done{background:var(--green)!important;color:#fff!important;border-color:transparent!important}
-.cal-cell.range-new{border-color:var(--orange)!important}
-.cal-cell.range-montage{border-color:var(--yellow)!important}
-.cal-cell.range-approve{border-color:var(--green)!important}
+
+.cal-cell.has-holiday::before{
+  content:'×';position:absolute;font-size:20px;color:var(--red);font-weight:300;
+}
+.cal-cell.has-rent{
+  box-shadow:inset 0 0 0 2px var(--blue);
+}
+.cal-cell.has-shoot{
+  background:linear-gradient(135deg, var(--shoot-color, var(--orange)) 28%, transparent 29%);
+}
+.cal-cell.has-deadline{
+  box-shadow:inset 0 0 0 2px #000;
+  background:linear-gradient(135deg, var(--shoot-color, var(--orange)) 28%, transparent 29%);
+}
+
 .day-tip{
   position:absolute;background:rgba(10,10,10,.92);color:#fff;
   border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600;
@@ -378,8 +346,7 @@ body{
 }
 .day-tip.hidden{display:none}
 
-/* ── EV SECTION GROUPED ── */
-.ev-section{padding:0 14px 16px}
+.ev-section,.rent-sort-section{padding:0 14px 16px}
 .ev-group-label{
   font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
   color:rgba(255,255,255,.45);padding:14px 0 7px 2px;
@@ -390,27 +357,20 @@ body{
   border-radius:16px;padding:14px;margin-bottom:8px;
   border:1px solid rgba(255,255,255,.3);
   box-shadow:0 2px 12px rgba(0,0,0,.18);
-  cursor:grab;user-select:none;
 }
-.ev-card.dragging{opacity:.5;cursor:grabbing}
 .ev-card-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
 .ev-stage-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
 .ev-card-info{flex:1;min-width:0}
 .ev-card-name{font-size:15px;font-weight:800;letter-spacing:-.2px;color:var(--text)}
 .ev-card-meta{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
-.ev-card-deadline{font-size:12px;margin-top:2px;font-weight:600}
+.ev-card-work-lbl{font-size:11px;font-weight:800;color:var(--orange);text-transform:uppercase;margin-top:4px;letter-spacing:.05em}
 .ev-card-btns{display:flex;gap:7px;align-items:center}
 .btn-stage{
   flex:1;padding:9px 7px;border-radius:11px;border:none;
   font-family:'Raleway',sans-serif;font-size:12px;font-weight:700;
   cursor:pointer;text-align:center;line-height:1.2;transition:all .15s;
 }
-.btn-back-stage{
-  background:rgba(0,0,0,.09);color:var(--text);border:none;
-  width:36px;height:36px;border-radius:11px;font-size:15px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.btn-edit-ev{
+.btn-back-stage,.btn-edit-ev{
   background:rgba(0,0,0,.07);color:var(--text);border:none;
   width:36px;height:36px;border-radius:11px;font-size:15px;
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
@@ -421,52 +381,10 @@ body{
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 
-/* ── IN-WORK PANEL ── */
-.inwork-trigger{
-  display:flex;align-items:center;gap:10px;
-  margin:10px 14px 0;
-  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
-  border-radius:14px;padding:12px 16px;cursor:pointer;
-  transition:background .12s;
-}
-.inwork-trigger:active{background:rgba(255,255,255,.12)}
-.inwork-trigger-txt{flex:1;font-size:14px;font-weight:700;color:#fff}
-.inwork-trigger-badge{
-  background:var(--red);color:#fff;
-  font-size:11px;font-weight:800;
-  padding:3px 8px;border-radius:10px;
-}
-.inwork-trigger-arr{color:rgba(255,255,255,.4);font-size:16px}
-
-/* In-work sheet */
-.iw-card{
-  background:rgba(255,255,255,.06);border-radius:14px;padding:14px;
-  margin-bottom:8px;border:1px solid rgba(255,255,255,.1);
-}
-.iw-card-name{font-size:14px;font-weight:800;color:#fff;margin-bottom:4px}
-.iw-card-meta{font-size:12px;color:rgba(255,255,255,.45);margin-bottom:10px;line-height:1.5}
-.iw-card-btns{display:flex;gap:7px}
-.btn-iw{
-  flex:1;padding:9px 7px;border-radius:10px;border:none;
-  font-family:'Raleway',sans-serif;font-size:12px;font-weight:700;cursor:pointer;
-}
-.btn-iw-back{background:rgba(255,255,255,.1);color:#fff}
-.btn-iw-adv{background:var(--orange);color:#fff}
-.btn-iw-edit{background:rgba(255,255,255,.08);color:#fff;width:36px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:10px;border:none;cursor:pointer;font-size:14px}
-.btn-iw-del{background:rgba(255,59,48,.12);color:var(--red);width:36px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:10px;border:none;cursor:pointer;font-size:18px;font-weight:700}
-.iw-drop-zone{
-  border:2px dashed rgba(255,59,48,.4);border-radius:14px;padding:20px;
-  text-align:center;font-size:13px;font-weight:600;color:rgba(255,59,48,.7);
-  margin-bottom:12px;transition:all .2s;
-}
-.iw-drop-zone.over{border-color:var(--red);background:rgba(255,59,48,.08);color:var(--red)}
-
-/* ── FLASH LIST ── */
-.flash-section{padding:16px}
-.flash-list{display:flex;flex-direction:column;gap:8px}
+.flash-section,.shoots-section{padding:16px}
+.flash-list,.shoots-list{display:flex;flex-direction:column;gap:8px}
 .flash-card{
-  background:rgba(255,255,255,.10);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  background:rgba(255,255,255,.10);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border-radius:16px;padding:13px 14px;
   display:flex;align-items:center;gap:13px;cursor:pointer;
   border:1px solid rgba(255,255,255,.18);
@@ -484,15 +402,10 @@ body{
 .empty-st .ei{font-size:48px;margin-bottom:12px}
 .empty-st p{font-size:15px;font-weight:500}
 
-/* ── SHOOTS SECTION ── */
-.shoots-section{padding:16px}
-.shoots-list{display:flex;flex-direction:column;gap:8px}
 .src-card{
-  background:rgba(255,255,255,.10);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  background:rgba(255,255,255,.10);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border-radius:16px;padding:14px 16px;
-  border:1px solid rgba(255,255,255,.15);
-  box-shadow:0 2px 10px rgba(0,0,0,.15);
+  border:1px solid rgba(255,255,255,.15);box-shadow:0 2px 10px rgba(0,0,0,.15);
 }
 .src-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
 .src-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
@@ -503,51 +416,34 @@ body{
 .btn-src-edit{flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;padding:10px;border-radius:11px;font-family:'Raleway',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
 .btn-src-open{flex:1;background:var(--red);border:none;color:#fff;padding:10px;border-radius:11px;font-family:'Raleway',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 10px rgba(255,59,48,.4)}
 
-/* ── COMPLETED SECTION ── */
 .btn-completed-toggle{
-  display:flex;align-items:center;gap:10px;
-  margin:4px 0 0;
+  display:flex;align-items:center;gap:10px;margin:12px 0 0;
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
   border-radius:14px;padding:13px 16px;cursor:pointer;width:100%;
   font-family:'Raleway',sans-serif;font-size:14px;font-weight:700;color:rgba(255,255,255,.7);
 }
-.btn-completed-toggle .ct-arr{margin-left:auto;transition:transform .2s}
-.btn-completed-toggle.open .ct-arr{transform:rotate(90deg)}
-.completed-list{display:none;margin-top:8px;flex-direction:column;gap:8px}
-.completed-list.open{display:flex}
+.btn-completed-toggle .ct-arr{margin-left:auto}
+
 .done-card{
   background:rgba(255,255,255,.06);border-radius:14px;padding:14px;
-  border:1px solid rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.1);margin-bottom:8px;
 }
-.done-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.done-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .done-card-info{flex:1}
 .done-card-name{font-size:14px;font-weight:800;color:#fff}
 .done-card-meta{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
-.done-stars{display:flex;gap:4px;margin:8px 0}
-.star{font-size:22px;cursor:pointer;opacity:.35;transition:opacity .12s,transform .12s;user-select:none}
-.star.lit{opacity:1}
-.star:active{transform:scale(1.3)}
-.done-comment{
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-  border-radius:10px;padding:10px 12px;color:#fff;
-  font-family:'Raleway',sans-serif;font-size:13px;font-weight:500;
-  width:100%;resize:none;outline:none;min-height:48px;height:auto;overflow:hidden;line-height:1.5;display:block;
-}
-.done-comment::placeholder{color:rgba(255,255,255,.25)}
-.btn-done-del{background:none;border:none;color:rgba(255,59,48,.6);font-size:18px;cursor:pointer;padding:2px 4px}
+.done-card-top .btn-back-stage{background:rgba(255,255,255,.1);color:#fff;font-size:12px;width:auto;padding:6px 12px;height:auto}
+.done-card-top .btn-done-del{background:none;border:none;color:var(--red);font-size:22px;cursor:pointer;margin-left:12px;line-height:1}
 
-/* ── PANEL ── */
 .panel{
-  position:fixed;inset:0;z-index:200;
-  display:flex;flex-direction:column;
+  position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;
   transform:translateX(100%);transition:transform .3s cubic-bezier(.32,1.2,.5,1);
 }
 .panel.open{transform:translateX(0)}
 @media(min-width:600px){.panel{position:absolute}}
-#panel-flash,#panel-notes,#panel-inwork,#panel-completed{background:#0f0f0f}
+#panel-flash,#panel-notes,#panel-completed{background:#0f0f0f}
 .panel-hdr{
-  background:rgba(0,0,0,.5);
-  display:flex;align-items:center;gap:10px;
+  background:rgba(0,0,0,.5);display:flex;align-items:center;gap:10px;
   padding:calc(var(--safe-top) + 10px) 16px 12px;
   border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;
   backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
@@ -568,6 +464,7 @@ body{
   display:flex;flex-direction:column;gap:8px;
   backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
 }
+
 .hero-card{background:rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:18px;display:flex;align-items:center;gap:14px;border:1px solid rgba(255,255,255,.12)}
 .hero-icon{width:58px;height:58px;border-radius:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .hero-info{flex:1}
@@ -576,6 +473,7 @@ body{
 .hero-status{display:flex;align-items:center;gap:6px;margin-top:7px}
 .status-lbl{font-size:12px;font-weight:600}
 .st-green{color:var(--green)}.st-red{color:var(--red)}
+
 .shoots-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .shoots-lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.35)}
 .btn-add-r{background:var(--red);border:none;color:#fff;width:30px;height:30px;border-radius:9px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:300;line-height:1}
@@ -587,14 +485,12 @@ body{
 .btn-del-flash{background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.25);color:var(--red);padding:13px;border-radius:12px;font-family:'Raleway',sans-serif;font-size:14px;font-weight:600;cursor:pointer;width:100%}
 .no-items{font-size:13px;color:rgba(255,255,255,.35);padding:6px 0}
 
-/* ── NOTES ── */
 .note-block{background:rgba(255,255,255,.07);border-radius:14px;padding:14px 42px 14px 14px;margin-bottom:10px;border:1px solid rgba(255,255,255,.1);position:relative}
 .note-textarea{background:transparent;border:none;color:#fff;font-family:'Raleway',sans-serif;font-size:15px;font-weight:500;width:100%;resize:none;outline:none;min-height:44px;height:auto;overflow:hidden;line-height:1.6;display:block}
 .note-textarea::placeholder{color:rgba(255,255,255,.28)}
 .btn-rm-note{position:absolute;top:10px;right:10px;background:transparent;border:none;color:rgba(255,255,255,.3);font-size:20px;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
 .btn-add-note{background:rgba(255,255,255,.06);border:1.5px dashed rgba(255,255,255,.2);color:rgba(255,255,255,.45);padding:14px;border-radius:12px;font-family:'Raleway',sans-serif;font-size:14px;font-weight:600;width:100%;cursor:pointer;margin-bottom:12px}
 
-/* ── SHOOT CHECKBOXES ── */
 .shoot-checks{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .chk-row{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border-radius:9px;padding:7px 12px;cursor:pointer;flex:1;min-width:130px;user-select:none;border:1px solid rgba(255,255,255,.08);transition:background .12s}
 .chk-row:active{background:rgba(255,255,255,.12)}
@@ -603,25 +499,21 @@ body{
 .chk-box.checked::after{content:'✓';color:#fff;font-size:12px;font-weight:800;line-height:1}
 .chk-lbl{font-size:12px;font-weight:600;color:rgba(255,255,255,.7);line-height:1.2}
 
-/* ── SHEETS ── */
 .sheet{
   position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;
-  display:flex;align-items:flex-end;
-  opacity:0;pointer-events:none;transition:opacity .2s;
+  display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
 }
 .sheet.open{opacity:1;pointer-events:all}
 .sheet-in{
   background:#1c1c1e;border-radius:20px 20px 0 0;
   padding:16px 16px calc(32px + var(--safe-bottom));
-  width:100%;height:88vh;
-  overflow-y:scroll;-webkit-overflow-scrolling:touch;
+  width:100%;height:88vh;overflow-y:scroll;-webkit-overflow-scrolling:touch;
   transform:translateY(100%);transition:transform .28s cubic-bezier(.32,1.2,.5,1);
 }
 .sheet.open .sheet-in{transform:translateY(0)}
 @media(min-width:600px){
-  .sheet{position:absolute}
-  .sheet-in{height:85%}
+  .sheet{position:absolute} .sheet-in{height:85%}
 }
 .handle{width:36px;height:4px;background:rgba(255,255,255,.14);border-radius:2px;margin:0 auto 16px}
 .sh-title{font-size:17px;font-weight:800;margin-bottom:18px;letter-spacing:-.3px;color:#fff}
@@ -645,21 +537,12 @@ body{
 .extra-inp::placeholder{color:rgba(255,255,255,.28)}
 .btn-rm-ex{background:none;border:none;color:rgba(255,255,255,.3);font-size:18px;cursor:pointer;padding:2px}
 .btn-add-ex{background:transparent;border:1.5px dashed rgba(255,255,255,.18);color:rgba(255,255,255,.38);padding:10px;border-radius:10px;font-family:'Raleway',sans-serif;font-size:13px;font-weight:600;width:100%;cursor:pointer;margin-bottom:10px}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.06);border-radius:11px;padding:12px 14px;margin-top:-4px;margin-bottom:14px}
-.toggle-lbl{font-size:14px;font-weight:500;color:#fff}
-.toggle-switch{position:relative;width:44px;height:26px;flex-shrink:0}
-.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
-.toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,.2);border-radius:13px;cursor:pointer;transition:.2s}
-.toggle-slider::before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
-.toggle-switch input:checked+.toggle-slider{background:var(--red)}
-.toggle-switch input:checked+.toggle-slider::before{transform:translateX(18px)}
 .pull-item{background:rgba(255,255,255,.06);border-radius:12px;padding:14px;margin-bottom:8px}
 .pull-item-name{font-size:14px;font-weight:700;color:#fff}
 .pull-item-meta{font-size:12px;color:rgba(255,255,255,.4);margin-top:3px}
 .pull-deadline-row{display:flex;align-items:center;gap:8px;margin-top:10px}
 .btn-pull-add{background:var(--red);border:none;color:#fff;padding:10px 16px;border-radius:10px;font-family:'Raleway',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
 
-/* ── CONFIRM ── */
 .confirm{
   position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;
   display:flex;align-items:center;justify-content:center;padding:20px;
@@ -675,13 +558,25 @@ body{
 .conf-btns button{flex:1;padding:13px;border-radius:12px;border:none;font-family:'Raleway',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
 .cyes{background:var(--red);color:#fff}
 .cno{background:rgba(255,255,255,.1);color:#fff}
+
+.rent-card{
+  background:rgba(255,255,255,.06);border-radius:14px;padding:14px;
+  margin-bottom:8px;border:1px solid rgba(255,255,255,.1);
+}
+.rent-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.rent-card-title{font-size:15px;font-weight:800;color:#fff}
+.rent-card-meta{font-size:12px;color:rgba(255,255,255,.4);margin-top:2px}
+.rent-card-tech{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.tech-badge{background:rgba(0,122,255,.15);color:#5ac8fa;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.rent-card-btns{display:flex;gap:8px;margin-top:12px}
+.btn-rent-edit{flex:1;background:rgba(255,255,255,.08);color:#fff;border:none;padding:8px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer}
+.btn-rent-del{background:rgba(255,59,48,.12);color:var(--red);border:none;width:36px;height:32px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
 <div class="desktop-wrap">
 <div class="app-frame">
 
-<!-- BG -->
 <div class="bg-layer" id="bg-layer">
   <div class="bg-img" id="bg-a"></div>
   <div class="bg-img" id="bg-b"></div>
@@ -702,11 +597,9 @@ body{
     </div>
   </div>
 
-  <!-- STATUS STRIP — calendar only -->
-  <div class="status-strip" id="status-strip" style="display:none"></div>
+  <div class="status-strip" id="status-strip"></div>
 
   <div class="scroll" id="main-scroll">
-    <!-- CALENDAR -->
     <div class="section active" id="sec-calendar">
       <div class="cal-outer">
         <div class="cal-wrap" id="cal-wrap-el">
@@ -723,18 +616,15 @@ body{
           </div>
         </div>
       </div>
-      <!-- In-work trigger — below calendar -->
-      <div style="padding:10px 14px 0">
-        <div class="inwork-trigger" id="inwork-trigger" onclick="openPanel('panel-inwork')">
-          <span class="inwork-trigger-txt">В работе</span>
-          <span class="inwork-trigger-badge" id="inwork-count">0</span>
-          <span class="inwork-trigger-arr">›</span>
-        </div>
+      
+      <div class="rent-sort-section" id="rent-sort-section">
+        <div class="ev-group-label">Аренда техники</div>
+        <div id="rent-sort-list"></div>
       </div>
+
       <div class="ev-section" id="ev-section"></div>
     </div>
 
-    <!-- FLASH -->
     <div class="section" id="sec-flash">
       <div class="flash-section">
         <div class="flash-list" id="flash-list"></div>
@@ -744,7 +634,6 @@ body{
       </div>
     </div>
 
-    <!-- SHOOTS -->
     <div class="section" id="sec-shoots">
       <div class="shoots-section">
         <div class="shoots-list" id="shoots-list"></div>
@@ -760,14 +649,12 @@ body{
   </div>
 </div>
 
-<!-- FABs -->
-<button class="fab" id="fab-cal"    onclick="openAddEvent(null)">+</button>
-<button class="fab" id="fab-flash"  onclick="fabFlashClick()">+</button>
-<button class="fab" id="fab-shoots" onclick="openAddEvent(null)">+</button>
+<button class="fab" id="fab-cal" onclick="handleFabCalClick()">+</button>
+<button class="fab" id="fab-flash" onclick="fabFlashClick()">+</button>
+<button class="fab" id="fab-shoots" onclick="openActionSelect(null)">+</button>
 <button class="btn-today" id="btn-today" onclick="goToToday()">↑ Сегодня</button>
 <button class="day-add-btn" id="day-add-btn" onclick="onDayAddBtn()">+</button>
 
-<!-- MORNING POPUP -->
 <div class="morning-overlay" id="morning-overlay">
   <div class="morning-box">
     <div class="morning-date" id="morning-date"></div>
@@ -777,28 +664,9 @@ body{
   </div>
 </div>
 
-<!-- IN-WORK PANEL -->
-<div class="panel" id="panel-inwork">
-  <div class="panel-hdr">
-    <button class="btn-back" onclick="closePanel('panel-inwork')">
-      <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M8 1L1.5 7.5L8 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Назад
-    </button>
-    <div class="panel-ttl">В работе</div>
-  </div>
-  <div class="panel-body" id="inwork-body">
-    <div class="iw-drop-zone" id="iw-drop-zone">Перетащи съёмку сюда</div>
-    <div id="inwork-list"></div>
-  </div>
-</div>
-
-<!-- FLASH PANEL -->
 <div class="panel" id="panel-flash">
   <div class="panel-hdr">
-    <button class="btn-back" onclick="closePanel('panel-flash')">
-      <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M8 1L1.5 7.5L8 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Флешки
-    </button>
+    <button class="btn-back" onclick="closePanel('panel-flash')">Назад</button>
     <div class="panel-ttl" id="pd-title"></div>
     <button class="btn-params" onclick="openEditFlash()">Параметры</button>
   </div>
@@ -816,13 +684,9 @@ body{
   </div>
 </div>
 
-<!-- COMPLETED PANEL -->
 <div class="panel" id="panel-completed">
   <div class="panel-hdr">
-    <button class="btn-back" onclick="closePanel('panel-completed')">
-      <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M8 1L1.5 7.5L8 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Съёмка
-    </button>
+    <button class="btn-back" onclick="closePanel('panel-completed')">Назад</button>
     <div class="panel-ttl">Завершённые</div>
   </div>
   <div class="panel-body">
@@ -833,13 +697,9 @@ body{
   </div>
 </div>
 
-<!-- NOTES PANEL -->
 <div class="panel" id="panel-notes">
   <div class="panel-hdr">
-    <button class="btn-back" onclick="closePanel('panel-notes')">
-      <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M8 1L1.5 7.5L8 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Съёмка
-    </button>
+    <button class="btn-back" onclick="closePanel('panel-notes')">Назад</button>
     <div class="panel-ttl" id="notes-panel-title"></div>
   </div>
   <div class="panel-body" id="notes-panel-body">
@@ -848,7 +708,41 @@ body{
   </div>
 </div>
 
-<!-- SHEET: flash params -->
+<div class="sheet" id="sh-action-select">
+  <div class="sheet-in" style="height:auto; max-height:45vh; padding-bottom:32px;">
+    <div class="handle"></div>
+    <div class="sh-title" id="sh-action-title">Выберите действие</div>
+    <button class="btn-prim" style="margin-bottom:10px; background:var(--orange)" onclick="selectActionType('shoot')">🎬 Сьёмка</button>
+    <button class="btn-prim" style="margin-bottom:10px; background:var(--red)" onclick="selectActionType('holiday')">❌ Выходной</button>
+    <button class="btn-prim" style="margin-bottom:10px; background:var(--blue)" onclick="selectActionType('rent')">📦 Аренда</button>
+    <button class="btn-sec" onclick="closeSheet('sh-action-select')">Отмена</button>
+  </div>
+</div>
+
+<div class="sheet" id="sh-color-select">
+  <div class="sheet-in" style="height:auto; max-height:40vh; padding-bottom:32px;">
+    <div class="handle"></div>
+    <div class="sh-title">Выберите цвет проекта</div>
+    <div class="color-row" id="project-color-palette" style="justify-content:center; gap:14px; padding:10px 0 20px;"></div>
+    <button class="btn-prim" onclick="confirmProjectColor()">Готово</button>
+  </div>
+</div>
+
+<div class="sheet" id="sh-rent">
+  <div class="sheet-in">
+    <div class="handle"></div>
+    <div class="sh-title" id="sh-rent-title">Новая аренда</div>
+    <div class="fld"><div class="fld-lbl">Имя клиента</div><input class="fld-inp" id="rent-name" type="text" placeholder="Имя"></div>
+    <div class="fld"><div class="fld-lbl">Дата</div><input class="fld-inp" id="rent-date" type="date"></div>
+    <div class="fld">
+      <div class="fld-lbl">Что сдается в аренду</div>
+      <div class="chips" id="rent-tech-chips"></div>
+    </div>
+    <button class="btn-prim" style="background:var(--blue); box-shadow:0 4px 16px rgba(0,122,255,.4)" onclick="saveRent()">Сохранить</button>
+    <button class="btn-sec" onclick="closeSheet('sh-rent')">Отмена</button>
+  </div>
+</div>
+
 <div class="sheet" id="sh-flash">
   <div class="sheet-in">
     <div class="handle"></div>
@@ -862,28 +756,15 @@ body{
   </div>
 </div>
 
-<!-- SHEET: add to flash -->
 <div class="sheet" id="sh-add-to-flash">
   <div class="sheet-in">
     <div class="handle"></div>
     <div class="sh-title">Добавить съёмку</div>
     <div id="add-to-flash-list"></div>
-    <div id="atf-manual" style="display:none">
-      <div style="height:1px;background:rgba(255,255,255,.08);margin:4px 0 16px"></div>
-      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Своя запись</div>
-      <div class="fld"><div class="fld-lbl">Название</div><input class="fld-inp" id="fm-name" type="text" placeholder="Название или описание"></div>
-      <div class="fld"><div class="fld-lbl">Дата</div><input class="fld-inp" id="fm-date" type="date"></div>
-      <div class="fld"><div class="fld-lbl">Дедлайн</div><input class="fld-inp" id="fm-deadline" type="date"></div>
-      <button class="btn-prim" style="margin-bottom:8px" onclick="saveManualFlashShoot()">Добавить свою запись</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn-sec" style="flex:1;margin:0" onclick="closeSheet('sh-add-to-flash')">Отмена</button>
-      <button class="btn-sec" style="flex:1;margin:0;color:var(--red);font-weight:700" id="atf-manual-btn" onclick="toggleAtfManual()">+ Добавить свою</button>
-    </div>
+    <button class="btn-sec" onclick="closeSheet('sh-add-to-flash')">Отмена</button>
   </div>
 </div>
 
-<!-- SHEET: new/edit event -->
 <div class="sheet" id="sh-event">
   <div class="sheet-in">
     <div class="handle"></div>
@@ -897,15 +778,11 @@ body{
     <div class="fld"><div class="fld-lbl">Дата съёмки</div><input class="fld-inp" id="ev-date" type="date"></div>
     <div class="fld"><div class="fld-lbl">Время</div><input class="fld-inp" id="ev-time" type="time"></div>
     <div class="fld"><div class="fld-lbl">Дедлайн (необязательно)</div><input class="fld-inp" id="ev-deadline" type="date"></div>
-    <div class="toggle-row">
-      <span class="toggle-lbl">Выделять дни до дедлайна</span>
-      <label class="toggle-switch"><input type="checkbox" id="ev-highlight-range"><span class="toggle-slider"></span></label>
-    </div>
     <div class="fld"><div class="fld-lbl">Телефон</div><input class="fld-inp" id="ev-phone" type="tel" placeholder="+7"></div>
     <div class="fld"><div class="fld-lbl">Ссылка (соцсети)</div><input class="fld-inp" id="ev-link" type="url" placeholder="https://..."></div>
     <div id="ev-extras"></div>
     <button class="btn-add-ex" onclick="addEvExtra()">＋ Дополнительное поле</button>
-    <button class="btn-prim" onclick="saveEvent()">Сохранить</button>
+    <button class="btn-prim" onclick="processShootSave()">Сохранить</button>
     <button class="btn-sec" onclick="closeSheet('sh-event')">Отмена</button>
   </div>
 </div>
@@ -923,26 +800,29 @@ body{
   </div>
 </div>
 
-</div><!-- /app-frame -->
-</div><!-- /desktop-wrap -->
+</div>
+</div>
 
 <script>
-/* ═══ CONSTANTS ═══ */
 const SIZES=['16','32','64','128','256'];
 const BRANDS=['Transcend','SanDisk','Kingston','Samsung'];
 const EV_TYPES=['Свадьба','Мероприятие','Реклама','Предметка'];
+const TECH_LIST=['Sony','GoPro','GH5','Zoom H1','Rode Go','Свет'];
 const COLORS=[
   {name:'Серый',hex:'#374151'},{name:'Синий',hex:'#007aff'},
   {name:'Зелёный',hex:'#34c759'},{name:'Красный',hex:'#ff3b30'},
   {name:'Оранжевый',hex:'#ff9500'},{name:'Жёлтый',hex:'#ffcc00'},
   {name:'Белый',hex:'#e5e7eb'},
 ];
+const PROJECT_COLORS=[
+  '#ff3b30','#ff9500','#ffcc00','#34c759','#5ac8fa','#007aff','#5856d6','#af52de','#e5e7eb','#374151'
+];
 const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const WDS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const STAGE_INFO=[
-  {label:'Монтаж',bg:'#ff9500',color:'#fff',dot:'#ff9500'},
-  {label:'Утверждение',bg:'#c9a800',color:'#fff',dot:'#c9a800'},
-  {label:'Готово',bg:'#34c759',color:'#fff',dot:'#34c759'},
+  {label:'Монтаж',bg:'#ff9500',color:'#fff'},
+  {label:'Утверждение',bg:'#ffcc00',color:'#000'},
+  {label:'Готово',bg:'#34c759',color:'#fff'},
 ];
 const FONTS=[
   {f:'Climate Crisis',w:400},{f:'Russo One',w:400},{f:'Commissioner',w:700},
@@ -952,18 +832,15 @@ const FONTS=[
 const BG_IMGS=['bg1.JPG','bg2.JPG','bg3.JPG','bg4.JPG','bg5.JPG'];
 const DB_KEY='_db_v2';
 
-/* ═══ DATA ═══ */
-function db(){return JSON.parse(localStorage.getItem(DB_KEY)||'{"events":[],"flashes":[]}')}
+function db(){return JSON.parse(localStorage.getItem(DB_KEY)||'{"events":[],"flashes":[],"holidays":[],"rents":[]}')}
 function sv(d){
   localStorage.setItem(DB_KEY,JSON.stringify(d));
-  // Sync to Firebase if logged in
   if(window._fbSave) window._fbSave(d);
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
 function p2(n){return String(n).padStart(2,'0')}
 function toDS(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
 
-/* ═══ STATE ═══ */
 const TODAY=new Date();
 const TDS=toDS(TODAY);
 let calY=TODAY.getFullYear(),calM=TODAY.getMonth();
@@ -973,10 +850,16 @@ let evEditId=null,evType='',evExtras=[];
 let nfState={name:'',size:'64',colorHex:'#374151',brand:''};
 let curNotesEvId=null;
 
-/* ═══ FONT ANIMATION ═══ */
+let rentEditId=null;
+let rentSelectedTech=[];
+let selectedProjectColor='';
+let temporaryShootPayload=null;
+let targetActionDate='';
+
 let fontIdx=0;
 function cycleFont(){
   const el=document.getElementById('app-name');
+  if(!el)return;
   el.classList.add('fading');
   setTimeout(()=>{
     fontIdx=(fontIdx+1)%FONTS.length;
@@ -988,70 +871,57 @@ function cycleFont(){
 }
 setInterval(cycleFont,2000);
 
-/* ═══ BACKGROUND ═══ */
 let bgActive='a',bgLastIdx=-1;
 function randBg(){
-  let i;
-  do{i=Math.floor(Math.random()*BG_IMGS.length);}while(i===bgLastIdx&&BG_IMGS.length>1);
+  let i; do{i=Math.floor(Math.random()*BG_IMGS.length);}while(i===bgLastIdx&&BG_IMGS.length>1);
   bgLastIdx=i; return BG_IMGS[i];
 }
 function switchBg(){
   const next=bgActive==='a'?'b':'a';
   const inc=document.getElementById('bg-'+next);
   const out=document.getElementById('bg-'+bgActive);
+  if(!inc||!out)return;
   inc.style.backgroundImage=`url('${randBg()}')`;
   inc.classList.add('visible'); out.classList.remove('visible');
   bgActive=next;
 }
 switchBg();
 
-/* ═══ MORNING POPUP ═══ */
 function checkMorning(){
   const data=db();
-  const key='_morning_'+TDS;
-  if(localStorage.getItem(key)) return;
   const items=[];
 
-  // Today's shoots
   const todayShoots=data.events.filter(e=>e.date===TDS&&(e.stage||0)<3);
   todayShoots.forEach(e=>{
     items.push({type:'shoot',title:`Съёмка: ${e.clientName||e.type||'Без имени'}`,sub:e.time?`Время: ${e.time}`:'',cls:''});
   });
 
-  // Today's deadlines
   const todayDl=data.events.filter(e=>e.deadline===TDS&&(e.stage||0)<3);
   todayDl.forEach(e=>{
     items.push({type:'deadline',title:`Дедлайн: ${e.clientName||e.type||'Без имени'}`,sub:'Сегодня последний день',cls:'warn'});
   });
 
-  // Overdue deadlines
-  const overdue=data.events.filter(e=>e.deadline&&e.deadline<TDS&&(e.stage||0)<3);
-  overdue.forEach(e=>{
-    const days=Math.round((new Date(TDS)-new Date(e.deadline))/864e5);
-    items.push({type:'overdue',title:`Просрочен: ${e.clientName||e.type||'Без имени'}`,sub:`Просрочен на ${days} дн.`,cls:'warn'});
+  const tomorrowStr=toDS(new Date(TODAY.getTime() + 864e5));
+  const tomorrowDl=data.events.filter(e=>e.deadline===tomorrowStr&&(e.stage||0)<3);
+  tomorrowDl.forEach(e=>{
+    items.push({type:'deadline',title:`Дедлайн завтра: ${e.clientName||e.type||'Без имени'}`,sub:'Остался 1 день',cls:'warn'});
   });
 
-  // Upcoming deadlines (1-3 days)
-  const upcoming=data.events.filter(e=>{
-    if(!e.deadline||e.deadline<=TDS||(e.stage||0)>=3) return false;
-    const d=Math.round((new Date(e.deadline)-new Date(TDS))/864e5);
-    return d>=1&&d<=3;
-  });
-  upcoming.forEach(e=>{
-    const d=Math.round((new Date(e.deadline)-new Date(TDS))/864e5);
-    items.push({type:'upcoming',title:`До дедлайна: ${e.clientName||e.type||'Без имени'}`,sub:`Осталось ${d} дн.`,cls:'ok'});
-  });
+  const activeRents=data.rents||[];
+  const hasActiveRent = activeRents.some(r=>r.date === TDS);
 
-  if(!items.length) return; // nothing urgent — don't show
+  if(!items.length && !todayShoots.length && !todayDl.length && !tomorrowDl.length && !hasActiveRent) {
+    items.push({type:'info',title:'На сегодня съёмок и важных дедлайнов нет',sub:'',cls:'ok'});
+  }
 
   const dayNames=['воскресенье','понедельник','вторник','среду','четверг','пятницу','субботу'];
   document.getElementById('morning-date').textContent=
     TODAY.getDate()+' '+MONTHS[TODAY.getMonth()].toLowerCase()+', '+dayNames[TODAY.getDay()];
+  
   document.getElementById('morning-title').textContent=
     todayShoots.length?`Сегодня ${todayShoots.length} съёмк${todayShoots.length===1?'а':'и'}`
     :todayDl.length?'Сегодня дедлайн'
-    :overdue.length?'Есть просроченные дедлайны'
-    :'Горящие дедлайны';
+    :'Сводка на сегодня';
 
   document.getElementById('morning-items').innerHTML=items.map(it=>
     `<div class="morning-item ${it.cls}">
@@ -1060,205 +930,65 @@ function checkMorning(){
     </div>`).join('');
 
   document.getElementById('morning-overlay').classList.add('open');
-  localStorage.setItem(key,'1');
 }
 function closeMorning(){
   document.getElementById('morning-overlay').classList.remove('open');
 }
 
-/* ═══ STATUS STRIP ═══ */
 function renderStatusStrip(){
   const strip=document.getElementById('status-strip');
-  if(curTab!=='calendar'){strip.style.display='none';return;}
+  if(!strip) return;
   const data=db();
   const pills=[];
+
   const todayEvs=data.events.filter(e=>e.date===TDS&&(e.stage||0)<3);
-  if(todayEvs.length) pills.push(`Сегодня ${todayEvs.length} съёмк${todayEvs.length===1?'а':'и'}`);
+  const tomorrowStr=toDS(new Date(TODAY.getTime() + 864e5));
+  const tomorrowEvs=data.events.filter(e=>e.date===tomorrowStr&&(e.stage||0)<3);
+
+  if(todayEvs.length) pills.push({txt:`Сегодня ${todayEvs.length} съёмк${todayEvs.length===1?'а':'и'}`, cls:''});
+  else if(tomorrowEvs.length) pills.push({txt:'Завтра съемка', cls:''});
+  else pills.push({txt:'Съёмок нет', cls:''});
+
+  const inWork=data.events.filter(e=>(e.stage||0)===1);
+  if(inWork.length) pills.push({txt:`В работе: ${inWork.length} съёмк${inWork.length===1?'а':'и'}`, cls:''});
+
+  const rents=data.rents||[];
+  const hasActiveRent = rents.some(r=>r.date >= TDS);
+  if(hasActiveRent) pills.push({txt:'Аренда', cls:'blue-pill'});
+
   const todayDl=data.events.filter(e=>e.deadline===TDS&&(e.stage||0)<3);
-  if(todayDl.length) pills.push(`Сегодня дедлайн`);
-  const overdue=data.events.filter(e=>e.deadline&&e.deadline<TDS&&(e.stage||0)<3);
-  if(overdue.length) pills.push(`Просрочено: ${overdue.length}`);
-  const inWork=data.events.filter(e=>isInWork(e));
-  if(inWork.length) pills.push(`В работе: ${inWork.length}`);
-  if(!pills.length) pills.push('Сегодня сьёмок нет');
-  strip.style.display='flex';
-  const isAlert=todayEvs.length||todayDl.length||overdue.length;
-  strip.innerHTML=pills.map((p,i)=>
-    `<div class="status-pill ${i>0&&!isAlert?'neutral':''}">${p}</div>`).join('');
+  const tomorrowDl=data.events.filter(e=>e.deadline===tomorrowStr&&(e.stage||0)<3);
+  if(todayDl.length) pills.push({txt:'Дедлайн сегодня', cls:''});
+  if(tomorrowDl.length) pills.push({txt:'Дедлайн завтра', cls:''});
+
+  strip.innerHTML=pills.map(p=>`<div class="status-pill ${p.cls}">${p.txt}</div>`).join('');
 }
 
-/* ═══ TABS ═══ */
 function switchTab(t){
   const prev=curTab; curTab=t;
   document.querySelectorAll('.tab').forEach((el,i)=>
     el.classList.toggle('active',['calendar','flash','shoots'][i]===t));
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.getElementById('sec-'+t).classList.add('active');
+  
   ['cal','flash','shoots'].forEach(id=>{
-    document.getElementById('fab-'+id).style.display=id===t?'flex':'none';
+    const fab = document.getElementById('fab-'+id);
+    if(fab) fab.style.display=id===t?'flex':'none';
   });
   if(prev!==t) switchBg();
   renderStatusStrip();
-  if(t==='calendar'){renderCal();checkTodayBtn();}
-  if(t==='flash') renderFlashList();
-  if(t==='shoots') renderShootsList();
-  if(t!=='calendar') document.getElementById('btn-today').classList.remove('show');
+  if(t=='calendar'){renderCal();checkTodayBtn();}
+  if(t=='flash') renderFlashList();
+  if(t=='shoots') renderShootsList();
+  if(t!='calendar') document.getElementById('btn-today').classList.remove('show');
 }
 
-/* ═══ IN-WORK LOGIC ═══ */
-function isInWork(ev){
-  return !!ev.inWork && (ev.stage||0)<3;
-}
-function renderInWorkBadge(){
-  const data=db();
-  const n=data.events.filter(e=>isInWork(e)).length;
-  document.getElementById('inwork-count').textContent=n;
-  const trigger=document.getElementById('inwork-trigger');
-  trigger.style.borderColor=n>0?'rgba(255,59,48,.4)':'rgba(255,255,255,.12)';
-}
-function renderInWorkPanel(){
-  const data=db();
-  const evs=data.events.filter(e=>isInWork(e));
-  const el=document.getElementById('inwork-list');
-  if(!evs.length){el.innerHTML='<div style="color:rgba(255,255,255,.4);font-size:13px;padding:8px 0">Нет проектов в работе</div>';return;}
-  el.innerHTML=evs.map(ev=>{
-    const st=ev.stage||0;
-    const info=STAGE_INFO[Math.min(st,2)];
-    const typeStr=ev.type?`[${ev.type}] `:'';
-    let meta=ev.date||'—'; if(ev.time) meta+=` · ${ev.time}`;
-    if(ev.deadline){
-      const d=daysUntil(ev.deadline);
-      meta+=d!==null?(d<0?` · ⚠ просрочен`:(d===0?` · дедлайн сегодня`:` · ${d} дн. до дедлайна`)):'';
-    }
-    return `<div class="iw-card">
-      <div class="iw-card-name">${typeStr}${ev.clientName||'Без имени'}</div>
-      <div class="iw-card-meta">${meta}</div>
-      <div class="iw-card-btns">
-        ${st>0?`<button class="btn-iw btn-iw-back" onclick="backStage('${ev.id}');renderInWorkPanel()">◀</button>`:''}
-        <button class="btn-iw btn-iw-adv" style="background:${info.bg}" onclick="advStage('${ev.id}');renderInWorkPanel()">${info.label}</button>
-        <button class="btn-iw btn-iw-edit" onclick="openEditEvent('${ev.id}')">✏️</button>
-        <button class="btn-iw btn-iw-del" onclick="deleteEvent('${ev.id}')">×</button>
-      </div>
-    </div>`;
-  }).join('');
+function handleFabCalClick(){
+  openActionSelect(null);
 }
 
-/* drag-and-drop to in-work — desktop + mobile touch */
-let _dragEvId=null;
-let _dragGhost=null;
-let _dragCard=null;
-
-function initDragDrop(){
-  const dz=document.getElementById('iw-drop-zone');
-  // Desktop
-  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
-  dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
-  dz.addEventListener('drop',e=>{
-    e.preventDefault();dz.classList.remove('over');
-    if(_dragEvId) moveToInWork(_dragEvId);
-  });
-}
-
-function moveToInWork(id){
-  const data=db(),ev=data.events.find(x=>x.id===id);
-  if(ev){ev.inWork=true;sv(data);}
-  _dragEvId=null;_dragCard=null;
-  if(_dragGhost){_dragGhost.remove();_dragGhost=null;}
-  renderInWorkPanel();renderInWorkBadge();buildGrid();
-}
-
-function initCardDrag(card,id){
-  let timer=null,active=false,startX=0,startY=0;
-
-  function onStart(cx,cy){
-    startX=cx;startY=cy;
-    timer=setTimeout(()=>{
-      active=true;_dragEvId=id;_dragCard=card;
-      card.style.opacity='.35';
-      _dragGhost=document.createElement('div');
-      _dragGhost.style.cssText='position:fixed;z-index:9999;pointer-events:none;background:rgba(255,59,48,.9);color:#fff;font-family:Raleway,sans-serif;font-size:13px;font-weight:700;padding:10px 16px;border-radius:12px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);transform:scale(1.05)';
-      _dragGhost.textContent='→ В работе';
-      document.body.appendChild(_dragGhost);
-      moveGhost(cx,cy);
-      // highlight drop zone
-      openPanel('panel-inwork');
-      setTimeout(()=>{
-        document.getElementById('iw-drop-zone').style.borderColor='var(--red)';
-        document.getElementById('iw-drop-zone').style.background='rgba(255,59,48,.08)';
-      },300);
-    },500);
-  }
-
-  function onMove(cx,cy){
-    if(!active||!_dragGhost) return;
-    moveGhost(cx,cy);
-    const dz=document.getElementById('iw-drop-zone');
-    if(!dz) return;
-    const r=dz.getBoundingClientRect();
-    const over=cx>=r.left&&cx<=r.right&&cy>=r.top&&cy<=r.bottom;
-    dz.classList.toggle('over',over);
-  }
-
-  function onEnd(cx,cy){
-    clearTimeout(timer);
-    if(active){
-      const dz=document.getElementById('iw-drop-zone');
-      if(dz){
-        const r=dz.getBoundingClientRect();
-        if(cx>=r.left&&cx<=r.right&&cy>=r.top&&cy<=r.bottom) moveToInWork(id);
-        dz.classList.remove('over');
-        dz.style.borderColor='';dz.style.background='';
-      }
-      card.style.opacity='';
-      if(_dragGhost){_dragGhost.remove();_dragGhost=null;}
-      active=false;_dragEvId=null;
-    }
-  }
-
-  function moveGhost(cx,cy){
-    if(_dragGhost){_dragGhost.style.left=(cx-60)+'px';_dragGhost.style.top=(cy-20)+'px';}
-  }
-
-  // Touch
-  card.addEventListener('touchstart',e=>{
-    const t=e.touches[0];onStart(t.clientX,t.clientY);
-  },{passive:true});
-  card.addEventListener('touchmove',e=>{
-    const t=e.touches[0];onMove(t.clientX,t.clientY);
-    if(active) e.preventDefault();
-  },{passive:false});
-  card.addEventListener('touchend',e=>{
-    const t=e.changedTouches[0];onEnd(t.clientX,t.clientY);
-  });
-  card.addEventListener('touchcancel',()=>{
-    clearTimeout(timer);active=false;card.style.opacity='';
-    if(_dragGhost){_dragGhost.remove();_dragGhost=null;}
-  });
-
-  // Desktop
-  card.addEventListener('dragstart',e=>{
-    e.dataTransfer.setData('evId',id);_dragEvId=id;
-    card.classList.add('dragging');
-  });
-  card.addEventListener('dragend',()=>{card.classList.remove('dragging');_dragEvId=null;});
-}
-
-/* ═══ CALENDAR ═══ */
-let tapState={ds:null,timer:null},selCell=null,calBusy=false;
-
-function initCalSwipe(){
-  const el=document.getElementById('cal-wrap-el');
-  if(el._sw) return; el._sw=true;
-  let sx=0,sy=0;
-  el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
-  el.addEventListener('touchend',e=>{
-    const dx=e.changedTouches[0].clientX-sx;
-    const dy=Math.abs(e.changedTouches[0].clientY-sy);
-    if(Math.abs(dx)>48&&dy<40) calMove(dx<0?1:-1);
-  },{passive:true});
-}
 function calMove(dir){
-  if(calBusy) return; calBusy=true;
+  if(window.calBusy) return; window.calBusy=true;
   const g=document.getElementById('cal-grid');
   g.classList.remove('settled');
   g.classList.add(dir>0?'out-left':'out-right');
@@ -1273,7 +1003,7 @@ function calMove(dir){
     g.classList.remove('in-left','in-right');
     g.classList.add('settled');
     checkTodayBtn();
-    setTimeout(()=>{calBusy=false;},340);
+    setTimeout(()=>{window.calBusy=false;},340);
   },310);
 }
 function goToToday(){
@@ -1288,91 +1018,111 @@ function checkTodayBtn(){
 function renderCal(){
   document.getElementById('cal-label').textContent=MONTHS[calM]+' '+calY;
   document.getElementById('cal-wdays').innerHTML=WDS.map(w=>`<div class="cal-wd">${w}</div>`).join('');
-  buildGrid(); initCalSwipe();
+  buildGrid();
+  
+  const el=document.getElementById('cal-wrap-el');
+  if(!el._sw){
+    el._sw=true;
+    let sx=0,sy=0;
+    el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+    el.addEventListener('touchend',e=>{
+      const dx=e.changedTouches[0].clientX-sx;
+      const dy=Math.abs(e.changedTouches[0].clientY-sy);
+      if(Math.abs(dx)>48&&dy<40) calMove(dx<0?1:-1);
+    },{passive:true});
+  }
 }
+
 function buildGrid(){
   const g=document.getElementById('cal-grid');
-  g.innerHTML=''; selCell=null;
+  g.innerHTML=''; window.selCell=null;
   const first=new Date(calY,calM,1);
   let sd=first.getDay(); sd=sd===0?6:sd-1;
   const dim=new Date(calY,calM+1,0).getDate();
   const data=db();
-  const stageMap={},dlDates=new Set(),dlDone=new Set(),rangeMap={};
-  for(const ev of data.events){
-    if(!ev.date) continue;
-    const st=ev.stage||0;
-    if(st<3){if(stageMap[ev.date]===undefined||st<stageMap[ev.date])stageMap[ev.date]=st;}
-    if(ev.deadline){
-      (st>=3?dlDone:dlDates).add(ev.deadline);
-      if(ev.highlightRange){
-        const s=new Date(ev.date+'T12:00'),e2=new Date(ev.deadline+'T12:00');
-        for(let dd=new Date(s);dd<=e2;dd.setDate(dd.getDate()+1)){
-          const dds=toDS(dd);
-          if(dds!==ev.date&&rangeMap[dds]===undefined) rangeMap[dds]=st<3?st:3;
-        }
-      }
+
+  const shootsMap={};
+  const deadlinesMap={};
+  (data.events||[]).forEach(ev=>{
+    if(!ev.date || (ev.stage||0) >= 3) return;
+    shootsMap[ev.date] = ev.color||'#ff9500';
+    if(ev.deadline) {
+      deadlinesMap[ev.deadline] = ev.color||'#ff9500';
     }
+  });
+
+  const holidaySet = new Set(data.holidays||[]);
+  const rentSet = new Set((data.rents||[]).map(r=>r.date));
+
+  for(let i=0;i<sd;i++){
+    const c=document.createElement('div'); c.className='cal-cell empty'; g.appendChild(c);
   }
-  for(let i=0;i<sd;i++){const c=document.createElement('div');c.className='cal-cell empty';g.appendChild(c);}
+  
   for(let d=1;d<=dim;d++){
     const ds=`${calY}-${p2(calM+1)}-${p2(d)}`;
     const c=document.createElement('div'); c.className='cal-cell'; c.textContent=d;
     if(ds===TDS) c.classList.add('today');
-    const st=stageMap[ds];
-    if(st===0) c.classList.add('stage-new');
-    else if(st===1) c.classList.add('stage-montage');
-    else if(st===2) c.classList.add('stage-approve');
-    if(st===undefined){
-      if(dlDone.has(ds)) c.classList.add('deadline-day-done');
-      else if(dlDates.has(ds)) c.classList.add('deadline-day');
-      else if(rangeMap[ds]!==undefined){
-        const r=rangeMap[ds];
-        if(r===0) c.classList.add('range-new');
-        else if(r===1) c.classList.add('range-montage');
-        else if(r===2) c.classList.add('range-approve');
-      }
+
+    if(holidaySet.has(ds)) {
+      c.classList.add('has-holiday');
     }
-    // drag
-    c.draggable=false; // cells don't drag
+    if(rentSet.has(ds)) {
+      c.classList.add('has-rent');
+    }
+    if(shootsMap[ds]) {
+      c.classList.add('has-shoot');
+      c.style.setProperty('--shoot-color', shootsMap[ds]);
+    }
+    if(deadlinesMap[ds]) {
+      c.classList.add('has-deadline');
+      c.style.setProperty('--shoot-color', deadlinesMap[ds]);
+    }
+
     c.addEventListener('click',()=>handleCellTap(ds,c));
     g.appendChild(c);
   }
   renderEvSection(data);
-  renderInWorkBadge();
+  renderRentSortSection(data);
+  renderStatusStrip();
 }
 
-/* ═══ CELL TAP ═══ */
-let _tapDs=null;
+let tapState={ds:null,timer:null};
 function handleCellTap(ds,cell){
   if(tapState.ds===ds){
     clearTimeout(tapState.timer); hideTip();
-    if(selCell){selCell.style.outline='';selCell=null;}
-    tapState={ds:null,timer:null}; openAddEvent(ds);
+    if(window.selCell){window.selCell.style.outline='';window.selCell=null;}
+    tapState={ds:null,timer:null}; openActionSelect(ds);
   } else {
     clearTimeout(tapState.timer); hideTip();
-    if(selCell) selCell.style.outline='';
-    selCell=cell; cell.style.outline='2px solid rgba(255,255,255,.55)';
+    if(window.selCell) window.selCell.style.outline='';
+    window.selCell=cell; cell.style.outline='2px solid rgba(255,255,255,.55)';
     tapState.ds=ds; showTip(ds,cell);
     tapState.timer=setTimeout(()=>{
-      hideTip();if(selCell){selCell.style.outline='';selCell=null;}tapState={ds:null,timer:null};
+      hideTip(); if(window.selCell){window.selCell.style.outline='';window.selCell=null;} tapState={ds:null,timer:null};
     },2500);
   }
 }
 function onDayAddBtn(){
-  const ds=_tapDs; hideTip();
-  if(selCell){selCell.style.outline='';selCell=null;}
-  tapState={ds:null,timer:null}; openAddEvent(ds);
+  const ds=window._tapDs; hideTip();
+  if(window.selCell){window.selCell.style.outline='';window.selCell=null;}
+  tapState={ds:null,timer:null}; openActionSelect(ds);
 }
 function showTip(ds,cell){
-  hideTip(); _tapDs=ds;
+  hideTip(); window._tapDs=ds;
   const data=db();
   const evs=data.events.filter(e=>e.date===ds);
   const dls=data.events.filter(e=>e.deadline===ds&&(e.stage||0)<3);
+  const rnts=(data.rents||[]).filter(r=>r.date===ds);
+  const isHoli=(data.holidays||[]).includes(ds);
+  
   const tip=document.getElementById('day-tip');
   let html='';
   if(evs.length) html+=evs.map(e=>`${e.type?'['+e.type+'] ':''}${e.clientName||'—'}${e.time?' · '+e.time:''}`).join('<br>');
-  if(dls.length) html+=(html?'<br>':'')+'⏱ '+dls.map(e=>`Дедлайн: ${e.clientName||e.type||'—'}`).join(', ');
-  if(!html) html='Нет съёмок';
+  if(dls.length) html+=(html?'<br>':'')+'⏱ Дедлайн: '+dls.map(e=>e.clientName||'—').join(', ');
+  if(rnts.length) html+=(html?'<br>':'')+'📦 Аренда: '+rnts.map(r=>r.name||'—').join(', ');
+  if(isHoli) html+=(html?'<br>':'')+'❌ Выходной день';
+  if(!html) html='Нет записей';
+  
   tip.innerHTML=html;
   tip.className='day-tip';
   const frame=document.querySelector('.app-frame');
@@ -1382,6 +1132,7 @@ function showTip(ds,cell){
   if(left+220>frame.offsetWidth) left=frame.offsetWidth-224;
   if(top+80>frame.offsetHeight) top=r.top-fr.top-86;
   tip.style.top=top+'px'; tip.style.left=left+'px';
+  
   const addBtn=document.getElementById('day-add-btn');
   document.getElementById('fab-cal').style.display='none';
   addBtn.classList.add('show');
@@ -1390,23 +1141,122 @@ function hideTip(){
   document.getElementById('day-tip').className='day-tip hidden';
   document.getElementById('day-add-btn').classList.remove('show');
   if(curTab==='calendar') document.getElementById('fab-cal').style.display='flex';
-  _tapDs=null;
+  window._tapDs=null;
 }
 
-/* ═══ EVENT SECTION GROUPED ═══ */
-function daysUntil(ds){
-  if(!ds) return null;
-  return Math.round((new Date(ds+'T00:00')-new Date(TDS+'T00:00'))/864e5);
+function openActionSelect(date){
+  targetActionDate = date || toDS(TODAY);
+  openSheet('sh-action-select');
 }
+
+function selectActionType(type){
+  closeSheet('sh-action-select');
+  if(type==='shoot'){
+    openAddEvent(targetActionDate);
+  }else if(type==='holiday'){
+    const data=db();
+    if(!data.holidays) data.holidays=[];
+    if(!data.holidays.includes(targetActionDate)){
+      data.holidays.push(targetActionDate);
+      sv(data); buildGrid();
+    }
+  }else if(type==='rent'){
+    openAddRent(targetActionDate);
+  }
+}
+
+function openAddRent(date){
+  rentEditId=null;
+  rentSelectedTech=[];
+  document.getElementById('sh-rent-title').textContent='Новая аренда';
+  document.getElementById('rent-name').value='';
+  document.getElementById('rent-date').value=date||'';
+  renderRentTechChips();
+  openSheet('sh-rent');
+}
+function openEditRent(id){
+  const data=db();
+  const r=(data.rents||[]).find(x=>x.id===id); if(!r)return;
+  rentEditId=id;
+  rentSelectedTech=[...(r.tech||[])];
+  document.getElementById('sh-rent-title').textContent='Редактировать аренду';
+  document.getElementById('rent-name').value=r.name||'';
+  document.getElementById('rent-date').value=r.date||'';
+  renderRentTechChips();
+  openSheet('sh-rent');
+}
+function renderRentTechChips(){
+  document.getElementById('rent-tech-chips').innerHTML=TECH_LIST.map(t=>
+    `<div class="chip ${rentSelectedTech.includes(t)?'on':''}" onclick="toggleRentTech('${t}', this)">${t}</div>`).join('');
+}
+function toggleRentTech(t, el){
+  if(rentSelectedTech.includes(t)){
+    rentSelectedTech=rentSelectedTech.filter(x=>x!==t);
+    el.classList.remove('on');
+  }else{
+    rentSelectedTech.push(t);
+    el.classList.add('on');
+  }
+}
+function saveRent(){
+  const name=document.getElementById('rent-name').value.trim();
+  const date=document.getElementById('rent-date').value;
+  if(!name||!date)return;
+  const data=db();
+  if(!data.rents)data.rents=[];
+  const payload={name,date,tech:[...rentSelectedTech]};
+  if(rentEditId){
+    const r=data.rents.find(x=>x.id===rentEditId);
+    if(r)Object.assign(r,payload);
+  }else{
+    data.rents.push({id:uid(),...payload});
+  }
+  sv(data); closeSheet('sh-rent'); buildGrid();
+}
+function deleteRent(id){
+  showConfirm('Удалить аренду?','Запись аренды будет удалена.',()=>{
+    const data=db(); data.rents=(data.rents||[]).filter(x=>x.id!==id);
+    sv(data); buildGrid();
+  });
+}
+
+function renderRentSortSection(data){
+  const el=document.getElementById('rent-sort-list');
+  const sect=document.getElementById('rent-sort-section');
+  if(!el||!sect)return;
+  const rnts=data.rents||[];
+  if(!rnts.length){
+    sect.style.display='none'; return;
+  }
+  sect.style.display='block';
+  const list=[...rnts].sort((a,b)=>a.date.localeCompare(b.date));
+  el.innerHTML=list.map(r=>`
+    <div class="rent-card">
+      <div class="rent-card-top">
+        <div class="rent-card-info">
+          <div class="rent-card-title">${r.name||'Без имени'}</div>
+          <div class="rent-card-meta">📅 ${r.date}</div>
+        </div>
+      </div>
+      <div class="rent-card-tech">
+        ${(r.tech||[]).map(t=>`<span class="tech-badge">${t}</span>`).join('')}
+      </div>
+      <div class="rent-card-btns">
+        <button class="btn-rent-edit" onclick="openEditRent('${r.id}')">✏️ Редактировать</button>
+        <button class="btn-rent-del" onclick="deleteRent('${r.id}')">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+
 function renderEvSection(data){
   if(!data) data=db();
   const sec=document.getElementById('ev-section');
-  const allEvs=data.events;
+  if(!sec) return;
+  const allEvs=data.events||[];
   if(!allEvs.length){sec.innerHTML='<div style="color:rgba(255,255,255,.35);font-size:13px;padding:14px 0 0">Нет съёмок</div>';return;}
 
-  // Only active in calendar groups (stage < 3)
   const active=allEvs.filter(e=>(e.stage||0)<3);
-  // Done ones shown separately at bottom
   const done=allEvs.filter(e=>(e.stage||0)>=3);
 
   const groups={today:[],tomorrow:[],week:[],later:{}};
@@ -1433,80 +1283,58 @@ function renderEvSection(data){
   html+=renderGroup('Ближайшие',groups.week);
   Object.entries(groups.later).forEach(([k,v])=>{ html+=renderGroup(k,v); });
 
-  // Done section at bottom
   if(done.length){
     html+=`<div class="ev-group-label" style="color:rgba(255,255,255,.25)">Завершённые</div>`;
     html+=done.map(ev=>evCard(ev)).join('');
   }
-
   sec.innerHTML=html;
-
-  // init drag on active cards
-  sec.querySelectorAll('.ev-card[draggable="true"]').forEach(card=>{
-    const id=card.dataset.evid;
-    // Desktop HTML5
-    card.addEventListener('dragstart',e=>{
-      e.dataTransfer.setData('evId',id);
-      _dragEvId=id;
-      card.classList.add('dragging');
-    });
-    card.addEventListener('dragend',()=>{card.classList.remove('dragging');_dragEvId=null;});
-    // Mobile touch
-    initCardDrag(card, id);
-  });
 }
 
 function evCard(ev){
-  const st=ev.stage||0,isDone=st>=3;
+  const st=ev.stage||0, isDone=st>=3;
   const info=STAGE_INFO[Math.min(st,2)];
-  const stageBg=isDone?'rgba(255,255,255,.1)':info.bg;
-  const stageColor=isDone?'rgba(255,255,255,.5)':info.color;
-  const stageLabel=isDone?'✓ Готово':info.label;
-  const dotColor=isDone?'rgba(255,255,255,.2)':info.dot;
   const typeStr=ev.type?`[${ev.type}] `:'';
   let meta=ev.date||'—'; if(ev.time) meta+=` · ${ev.time}`; if(ev.phone) meta+=` · ${ev.phone}`;
+  
+  let workLabelHtml='';
+  if(!isDone && st===1){
+    workLabelHtml=`<div class="ev-card-work-lbl">В работе</div>`;
+  }
+  
   let dlHtml='';
-  if(ev.deadline&&!isDone){
-    const d=daysUntil(ev.deadline);
-    let txt,col;
-    if(d===null){txt=ev.deadline;col='rgba(255,255,255,.4)';}
-    else if(d<0){txt=`Просрочен (${Math.abs(d)} дн.)`;col='#ff3b30';}
-    else if(d===0){txt='Дедлайн сегодня';col='#ff3b30';}
-    else if(d===1){txt='Дедлайн завтра';col='#ff9500';}
-    else{txt=`До дедлайна: ${d} дн.`;col=d<=7?'#ff9500':'rgba(255,255,255,.4)';}
-    dlHtml=`<div class="ev-card-deadline" style="color:${col}">⏱ ${txt}</div>`;
+  if(ev.deadline && !isDone){
+    dlHtml=`<div class="ev-card-deadline" style="color:rgba(0,0,0,.4)">⏱ Дедлайн: ${ev.deadline}</div>`;
   }
   const lnk=ev.link&&!isDone?`<a href="${ev.link}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,59,48,.12);color:#ff3b30;font-family:Raleway,sans-serif;font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;text-decoration:none;margin-top:6px">Перейти →</a>`:'';
 
-  // Done card — dimmed, only back+delete
   if(isDone){
-    return `<div class="ev-card" data-evid="${ev.id}" style="opacity:.5">
+    return `<div class="ev-card" style="opacity:.6">
       <div class="ev-card-top">
-        <div class="ev-stage-dot" style="background:${dotColor}"></div>
+        <div class="ev-stage-dot" style="background:#8e8e93"></div>
         <div class="ev-card-info">
           <div class="ev-card-name" style="text-decoration:line-through">${typeStr}${ev.clientName||'Без имени'}</div>
           <div class="ev-card-meta">${meta}</div>
         </div>
       </div>
       <div class="ev-card-btns">
-        <button class="btn-back-stage" onclick="backStage('${ev.id}')" title="Вернуть">◀ Вернуть</button>
+        <button class="btn-back-stage" onclick="backStage('${ev.id}')" title="Вернуть" style="width:auto; padding:0 12px;">Вернуть</button>
         <button class="btn-del-ev" onclick="deleteEvent('${ev.id}')">×</button>
       </div>
     </div>`;
   }
 
-  return `<div class="ev-card" data-evid="${ev.id}" draggable="true">
+  return `<div class="ev-card">
     <div class="ev-card-top">
-      <div class="ev-stage-dot" style="background:${dotColor}"></div>
+      <div class="ev-stage-dot" style="background:${ev.color||'#ff9500'}"></div>
       <div class="ev-card-info">
         <div class="ev-card-name">${typeStr}${ev.clientName||'Без имени'}</div>
         <div class="ev-card-meta">${meta}</div>
-        ${dlHtml}${lnk}
+        ${workLabelHtml}${dlHtml}${lnk}
       </div>
     </div>
     <div class="ev-card-btns">
       ${st>0?`<button class="btn-back-stage" onclick="backStage('${ev.id}')">◀</button>`:''}
-      <button class="btn-stage" style="background:${stageBg};color:${stageColor}" onclick="advStage('${ev.id}')">${stageLabel}</button>
+      <button class="btn-stage" style="background:${info.bg};color:${info.color}" onclick="advStage('${ev.id}')">${info.label}</button>
       <button class="btn-edit-ev" onclick="openEditEvent('${ev.id}')">✏️</button>
       <button class="btn-del-ev" onclick="deleteEvent('${ev.id}')">×</button>
     </div>
@@ -1530,7 +1358,6 @@ function deleteEvent(id){
   });
 }
 
-/* ═══ ADD/EDIT EVENT ═══ */
 function openAddEvent(date){
   evEditId=null;evType='';evExtras=[];
   document.getElementById('sh-event-title').textContent='Новая съёмка';
@@ -1538,19 +1365,17 @@ function openAddEvent(date){
   document.getElementById('ev-date').value=date||'';
   document.getElementById('ev-custom-type').style.display='none';
   document.getElementById('ev-custom-type').value='';
-  document.getElementById('ev-highlight-range').checked=false;
   renderEvTypeChips();renderEvExtras();openSheet('sh-event');
 }
 function openEditEvent(id){
   const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
   evEditId=id;evExtras=[...(ev.extras||[])];
   evType=EV_TYPES.includes(ev.type)?ev.type:ev.type?'Своё':'';
-  document.getElementById('sh-event-title').textContent='Редактировать';
+  document.getElementById('sh-event-title').textContent='Редактировать съемку';
   ['ev-name','ev-date','ev-time','ev-deadline','ev-phone','ev-link'].forEach(fid=>{
     const map={'ev-name':ev.clientName,'ev-date':ev.date,'ev-time':ev.time,'ev-deadline':ev.deadline,'ev-phone':ev.phone,'ev-link':ev.link};
     document.getElementById(fid).value=map[fid]||'';
   });
-  document.getElementById('ev-highlight-range').checked=!!ev.highlightRange;
   const ci=document.getElementById('ev-custom-type');
   ci.style.display=evType==='Своё'?'block':'none';
   ci.value=evType==='Своё'?(ev.type||''):'';
@@ -1572,40 +1397,76 @@ function renderEvExtras(){
 }
 function addEvExtra(){evExtras.push('');renderEvExtras();}
 function rmEvExtra(i){evExtras.splice(i,1);renderEvExtras();}
-function saveEvent(){
+
+function processShootSave(){
   const date=document.getElementById('ev-date').value;if(!date)return;
   let type=evType==='Своё'?document.getElementById('ev-custom-type').value.trim():EV_TYPES.includes(evType)?evType:'';
-  const data=db();
-  const payload={type,highlightRange:document.getElementById('ev-highlight-range').checked,
+  
+  temporaryShootPayload = {
+    type,
     clientName:document.getElementById('ev-name').value.trim(),date,
     time:document.getElementById('ev-time').value,deadline:document.getElementById('ev-deadline').value,
     phone:document.getElementById('ev-phone').value.trim(),link:document.getElementById('ev-link').value.trim(),
-    extras:[...evExtras]};
-  if(evEditId){const ev=data.events.find(e=>e.id===evEditId);if(ev)Object.assign(ev,payload);}
-  else data.events.push({id:uid(),stage:0,notes:[],...payload});
-  sv(data);closeSheet('sh-event');buildGrid();
+    extras:[...evExtras]
+  };
+  
+  closeSheet('sh-event');
+  
+  if(evEditId){
+    const data=db(); const ev=data.events.find(e=>e.id===evEditId);
+    selectedProjectColor = ev ? (ev.color || PROJECT_COLORS[0]) : PROJECT_COLORS[0];
+  } else {
+    selectedProjectColor = PROJECT_COLORS[0];
+  }
+  
+  setTimeout(()=>{
+    openColorSelectSheet();
+  },350);
+}
+
+function openColorSelectSheet(){
+  const palette = document.getElementById('project-color-palette');
+  palette.innerHTML = PROJECT_COLORS.map(c=>`
+    <div class="cswatch ${selectedProjectColor===c?'on':''}" style="background:${c}" onclick="selectProjectColorHex('${c}', this)"></div>
+  `).join('');
+  openSheet('sh-color-select');
+}
+function selectProjectColorHex(c, el){
+  selectedProjectColor = c;
+  document.querySelectorAll('#project-color-palette .cswatch').forEach(sw=>sw.classList.remove('on'));
+  el.classList.add('on');
+}
+function confirmProjectColor(){
+  closeSheet('sh-color-select');
+  const data=db();
+  if(evEditId){
+    const ev=data.events.find(e=>e.id===evEditId);
+    if(ev){
+      Object.assign(ev, temporaryShootPayload);
+      ev.color = selectedProjectColor;
+    }
+  }else{
+    data.events.push({id:uid(),stage:0,notes:[],color:selectedProjectColor, ...temporaryShootPayload});
+  }
+  sv(data); buildGrid();
   if(curTab==='shoots') renderShootsList();
 }
 
-/* ═══ SHOOTS SECTION ═══ */
 function renderShootsList(){
   const data=db();
   const list=document.getElementById('shoots-list');
   const empty=document.getElementById('shoots-empty');
-  const active=data.events.filter(e=>(e.stage||0)<3);
+  const active=(data.events||[]).filter(e=>(e.stage||0)<3);
   if(!active.length){list.innerHTML='';empty.style.display='block';}
   else{
     empty.style.display='none';
     const evs=[...active].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
     list.innerHTML=evs.map(ev=>{
-      const st=ev.stage||0,isDone=st>=3;
-      const info=STAGE_INFO[Math.min(st,2)];
-      const dot=isDone?'rgba(255,255,255,.3)':info.dot;
       const typeStr=ev.type?`[${ev.type}] `:'';
       let meta=ev.date||'—';if(ev.time)meta+=` · ${ev.time}`;if(ev.deadline)meta+=` · ⏱ до ${ev.deadline}`;
       return `<div class="src-card">
         <div class="src-top">
-          <div class="src-dot" style="background:${dot}"></div>
+          <div class="src-dot" style="background:${ev.color||'#ff9500'}"></div>
           <div class="src-info"><div class="src-name">${typeStr}${ev.clientName||'Без имени'}</div><div class="src-meta">${meta}</div></div>
         </div>
         <div class="src-btns">
@@ -1618,51 +1479,30 @@ function renderShootsList(){
   renderCompletedList(data);
 }
 
-/* ═══ COMPLETED ═══ */
-function renderCompletedList(data){
+function renderCompletedList(data) {
   if(!data) data=db();
-  const done=data.events.filter(e=>(e.stage||0)>=3);
+  const done=(data.events||[]).filter(e=>(e.stage||0)>=3);
   const list=document.getElementById('completed-list');
   const empty=document.getElementById('completed-empty');
   if(!done.length){
-    list.innerHTML='';
-    if(empty) empty.style.display='block';
-    return;
+    list.innerHTML=''; if(empty) empty.style.display='block'; return;
   }
   if(empty) empty.style.display='none';
   list.innerHTML=done.map(ev=>{
     const typeStr=ev.type?`[${ev.type}] `:'';
-    const stars=ev.rating||0;
     return `<div class="done-card">
       <div class="done-card-top">
         <div class="done-card-info">
           <div class="done-card-name">${typeStr}${ev.clientName||'Без имени'}</div>
           <div class="done-card-meta">${ev.date||'—'}${ev.type?' · '+ev.type:''}</div>
         </div>
-        <button class="btn-done-del" onclick="deleteEvent('${ev.id}')">×</button>
+        <button class="btn-back-stage" onclick="backStage('${ev.id}');renderCompletedList()">Вернуть</button>
+        <button class="btn-done-del" onclick="deleteEvent('${ev.id}');renderCompletedList()">×</button>
       </div>
-      <div class="done-stars">
-        ${[1,2,3,4,5].map(n=>`<span class="star ${stars>=n?'lit':''}" onclick="setRating('${ev.id}',${n})">★</span>`).join('')}
-      </div>
-      <textarea class="done-comment" placeholder="Комментарий..." oninput="saveComment('${ev.id}',this.value);autoResize(this)">${escHtml(ev.comment||'')}</textarea>
     </div>`;
   }).join('');
-  list.querySelectorAll('.done-comment').forEach(autoResize);
-}
-function toggleCompleted(){
-  openPanel('panel-completed');
-  renderCompletedList();
-}
-function setRating(id,n){
-  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
-  ev.rating=ev.rating===n?0:n;sv(data);renderCompletedList(data);
-}
-function saveComment(id,val){
-  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
-  ev.comment=val;sv(data);
 }
 
-/* ═══ NOTES ═══ */
 function openNotes(evId){
   curNotesEvId=evId;
   const data=db(),ev=data.events.find(e=>e.id===evId);if(!ev)return;
@@ -1695,17 +1535,15 @@ function rmNoteBlock(i){
   if(!ev.notes)ev.notes=[];ev.notes.splice(i,1);sv(data);renderNoteBlocks(ev.notes);
 }
 
-/* ═══ FLASH SVG ═══ */
 function flashSVG(color,size=32){
   const c=color||'#374151';
   return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none"><path d="M18 8H82Q92 8 92 18V82Q92 92 82 92H18Q8 92 8 82V30L18 18Z" fill="${c}"/><rect x="26" y="14" width="10" height="22" rx="3" fill="white"/><rect x="40" y="14" width="10" height="22" rx="3" fill="white"/><rect x="54" y="14" width="10" height="22" rx="3" fill="white"/><rect x="68" y="14" width="10" height="22" rx="3" fill="white"/></svg>`;
 }
 
-/* ═══ FLASH LIST ═══ */
 function renderFlashList(){
   const data=db();
   const list=document.getElementById('flash-list'),empty=document.getElementById('flash-empty');
-  if(!data.flashes.length){list.innerHTML='';empty.style.display='block';return;}
+  if(!data.flashes||!data.flashes.length){list.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
   list.innerHTML=data.flashes.map(f=>{
     const m=f.marker||'green',c=f.colorHex||'#374151';
@@ -1717,7 +1555,6 @@ function renderFlashList(){
   }).join('');
 }
 
-/* ═══ FLASH PANEL ═══ */
 function openFlashPanel(id){curFid=id;renderFlashPanel();openPanel('panel-flash');}
 function renderFlashPanel(){
   const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
@@ -1762,39 +1599,23 @@ function closePanel(id){
 }
 function openPanel(id){
   document.getElementById(id).classList.add('open');
-  if(id==='panel-inwork') renderInWorkPanel();
   if(id==='panel-completed') renderCompletedList();
 }
 
 function openAddToFlash(){
-  const data=db(),evs=data.events;
-  document.getElementById('atf-manual').style.display='none';
-  document.getElementById('atf-manual-btn').textContent='+ Добавить свою';
-  ['fm-name','fm-date','fm-deadline'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const data=db(),evs=data.events||[];
   const el=document.getElementById('add-to-flash-list');
   el.innerHTML=evs.length?evs.map(ev=>`<div class="pull-item">
     <div class="pull-item-name">${ev.type?'['+ev.type+'] ':''}${ev.clientName||'Без имени'}</div>
     <div class="pull-item-meta">📅 ${ev.date||'—'}${ev.time?' · ⏰ '+ev.time:''}</div>
-    <div class="pull-deadline-row"><input class="fld-inp" type="date" id="afd-${ev.id}" placeholder="Дедлайн"><button class="btn-pull-add" onclick="addEvToFlash('${ev.id}')">Добавить</button></div>
+    <div class="pull-deadline-row"><button class="btn-pull-add" onclick="addEvToFlash('${ev.id}')">Добавить</button></div>
   </div>`).join(''):'<div class="no-items" style="margin-bottom:8px">Нет съёмок в календаре</div>';
   openSheet('sh-add-to-flash');
-}
-function toggleAtfManual(){
-  const m=document.getElementById('atf-manual'),btn=document.getElementById('atf-manual-btn');
-  const shown=m.style.display!=='none';
-  m.style.display=shown?'none':'block';btn.textContent=shown?'+ Добавить свою':'Скрыть';
 }
 function addEvToFlash(evId){
   const data=db(),ev=data.events.find(e=>e.id===evId),f=data.flashes.find(x=>x.id===curFid);
   if(!ev||!f)return;if(!f.shootings)f.shootings=[];
-  f.shootings.push({id:uid(),name:(ev.type?'['+ev.type+'] ':'')+( ev.clientName||'Без имени'),date:ev.date||'',deadline:(document.getElementById('afd-'+evId)||{}).value||'',calEvId:evId});
-  updMarker(f);sv(data);closeSheet('sh-add-to-flash');renderFlashPanel();
-}
-function saveManualFlashShoot(){
-  const name=document.getElementById('fm-name').value.trim();if(!name)return;
-  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
-  if(!f.shootings)f.shootings=[];
-  f.shootings.push({id:uid(),name,date:document.getElementById('fm-date').value,deadline:document.getElementById('fm-deadline').value});
+  f.shootings.push({id:uid(),name:(ev.type?'['+ev.type+'] ':'')+( ev.clientName||'Без имени'),date:ev.date||'',deadline:ev.deadline||'',calEvId:evId});
   updMarker(f);sv(data);closeSheet('sh-add-to-flash');renderFlashPanel();
 }
 function rmShoot(sid){
@@ -1810,7 +1631,6 @@ function doDeleteFlash(){showConfirm('Удалить флешку?','Карто�
 });}
 function updMarker(f){f.marker=(f.shootings&&f.shootings.length)?'red':'green';}
 
-/* ═══ FLASH FORM ═══ */
 function fabFlashClick(){
   editMode=false;nfState={name:'',size:'64',colorHex:'#374151',brand:''};
   document.getElementById('sh-flash-title').textContent='Новая флешка';
@@ -1836,15 +1656,16 @@ function setNFColor(hex,el){nfState.colorHex=hex;document.querySelectorAll('#nf-
 function saveFlash(){
   nfState.name=document.getElementById('nf-name').value.trim();
   const data=db();
+  if(!data.flashes) data.flashes=[];
   if(editMode){const f=data.flashes.find(x=>x.id===curFid);if(f)Object.assign(f,{name:nfState.name,size:nfState.size,colorHex:nfState.colorHex,brand:nfState.brand});}
   else data.flashes.push({id:uid(),name:nfState.name||'Флешка',size:nfState.size,colorHex:nfState.colorHex,brand:nfState.brand,marker:'green',shootings:[]});
   sv(data);closeSheet('sh-flash');if(editMode)renderFlashPanel();renderFlashList();
 }
 
-/* ═══ SHEETS + CONFIRM ═══ */
 function openSheet(id){document.getElementById(id).classList.add('open');}
 function closeSheet(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s)s.classList.remove('open');}));
+
 let confCb=null;
 function showConfirm(t,m,cb){
   document.getElementById('conf-title').textContent=t;
@@ -1854,12 +1675,10 @@ function showConfirm(t,m,cb){
 function closeConfirm(){document.getElementById('confirm').classList.remove('open');confCb=null;}
 document.getElementById('conf-ok').onclick=()=>{if(confCb)confCb();closeConfirm();};
 
-/* ═══ INIT ═══ */
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
-initDragDrop();
 switchTab('calendar');
 checkMorning();
-// Expose for Firebase module
+
 window.buildGrid=buildGrid;
 window.renderFlashList=renderFlashList;
 window.renderShootsList=renderShootsList;
