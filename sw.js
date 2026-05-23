@@ -8,7 +8,7 @@ const ASSETS = [
   './bg3.JPG',
   './bg4.JPG',
   './bg5.JPG',
-  'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Bebas+Neue&family=Cormorant+Garamond:wght@700&family=Oswald:wght@600&family=DM+Serif+Display&family=Raleway:wght@400;500;600;700;800&display=swap'
+  'https://fonts.googleapis.com/css2?family=Climate+Crisis&family=Russo+One&family=Commissioner:wght@700&family=Hachi+Maru+Pop&family=Stick&family=Delta+Gothic+One&family=Yuji+Boku&family=Seymour+One&family=Rubik+Scribble&family=Raleway:wght@400;500;600;700;800&display=swap'
 ];
 
 self.addEventListener('install', e => {
