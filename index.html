@@ -938,26 +938,26 @@ function checkMorning(){
   const data=db();
   const items=[];
 
-  const todayShoots=data.events.filter(e=>e.date===TDS&&(e.stage||0)<3);
+  // Фильтруем съёмки на сегодня, исключая завершённые (статус 3 и 4)
+  const todayShoots = (data.events||[]).filter(e=>e.date===TDS && (e.stage||0)<3);
   todayShoots.forEach(e=>{
     items.push({type:'shoot',title:`Съёмка: ${e.clientName||e.type||'Без имени'}`,sub:e.time?`Время: ${e.time}`:'',cls:''});
   });
 
-  const todayDl=data.events.filter(e=>e.deadline===TDS&&(e.stage||0)<3);
+  // Дедлайны на сегодня
+  const todayDl = (data.events||[]).filter(e=>e.deadline===TDS && (e.stage||0)<3);
   todayDl.forEach(e=>{
     items.push({type:'deadline',title:`Дедлайн: ${e.clientName||e.type||'Без имени'}`,sub:'Сегодня последний день',cls:'warn'});
   });
 
   const tomorrowStr=toDS(new Date(TODAY.getTime() + 864e5));
-  const tomorrowDl=data.events.filter(e=>e.deadline===tomorrowStr&&(e.stage||0)<3);
+  // Дедлайны на завтра
+  const tomorrowDl = (data.events||[]).filter(e=>e.deadline===tomorrowStr && (e.stage||0)<3);
   tomorrowDl.forEach(e=>{
     items.push({type:'deadline',title:`Дедлайн завтра: ${e.clientName||e.type||'Без имени'}`,sub:'Остался 1 день',cls:'warn'});
   });
 
-  const activeRents=data.rents||[];
-  const hasActiveRent = activeRents.some(r=>r.date === TDS);
-
-  if(!items.length && !todayShoots.length && !todayDl.length && !tomorrowDl.length && !hasActiveRent) {
+  if(!items.length) {
     items.push({type:'info',title:'На сегодня съёмок и важных дедлайнов нет',sub:'',cls:'ok'});
   }
 
