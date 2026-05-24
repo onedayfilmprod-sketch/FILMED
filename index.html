@@ -183,7 +183,7 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<button class="fab" id="fab-cal" onclick="handleFabCalClick()">+</button>
+<button class="fab" id="fab-cal" style="display:flex;" onclick="handleFabCalClick()">+</button>
 <button class="fab" id="fab-flash" onclick="fabFlashClick()">+</button>
 <button class="fab" id="fab-shoots" onclick="openActionSelect(null)">+</button>
 <button class="btn-today" id="btn-today" onclick="goToToday()">↑ Сегодня</button>
@@ -246,6 +246,7 @@ function renderAuthUI(user){
       <div class="file-upload-wrapper">
          <input type="file" id="shoot-media-file-uploader" accept="image/*" class="file-upload-input" onchange="uploadShootPreviewFile(this)">
       </div>
+      <div id="shoot-preview-img-frame" style="margin-top:10px; display:none; width:100%; height:120px; border-radius:12px; background-size:cover; background-position:center;"></div>
     </div>
     <div style="margin-bottom:16px;">
       <div class="fld-lbl" style="margin-bottom:6px;">Референсы (Ссылки построчно)</div>
@@ -279,7 +280,7 @@ function renderAuthUI(user){
     </div>
     <div class="prod-tab-pane" id="prod-pane-tech">
       <div id="prod-tech-setup-phase">
-        <div class="fld-lbl" style="margin-bottom:10px;">Выберите equipment на съёмку:</div>
+        <div class="fld-lbl" style="margin-bottom:10px;">Выберите оборудование на съёмку:</div>
         <div id="prod-tech-selector-chips" class="chips" style="margin-bottom:20px;"></div>
         <button class="btn-prim" style="background:var(--green);" onclick="advanceProductionTechPhase()">Далее →</button>
       </div>
@@ -329,7 +330,7 @@ function renderAuthUI(user){
       <div class="fld-lbl">Сколько заработал (₽)</div>
       <input class="fld-inp" id="archive-earnings-input" type="number" placeholder="Заработок в рублях">
     </div>
-    <button class="btn-prim" style="background:var(--green);" onclick="confirmProjectArchivation()">Завершить съёмку</button>
+    <div class="btn-prim" style="background:var(--green);" onclick="confirmProjectArchivation()">Завершить съёмку</div>
   </div>
 </div>
 
@@ -350,7 +351,7 @@ function renderAuthUI(user){
     <div class="handle"></div>
     <div class="sh-title" id="sh-action-title">Выберите действие</div>
     <button class="btn-prim" style="margin-bottom:10px; background:var(--orange)" onclick="selectActionType('shoot')">🎬 Съёмка</button>
-    <button class="btn-prim" style="margin-bottom:10px; background:var(--red)" onclick="selectActionType('holiday')">❌ Выходной</button>
+    <button class="btn-prim" style="margin-bottom:10px; background:var(--red)" onclick="selectActionType('holiday')">❌ Выходной (Вкл/Выкл)</button>
     <button class="btn-prim" style="margin-bottom:10px; background:var(--blue)" onclick="selectActionType('rent')">📦 Аренда</button>
     <button class="btn-prim" style="margin-bottom:10px; background:var(--yellow); color:#000; font-weight:800;" onclick="selectActionType('sticky')">📌 Sticky Notes</button>
     <button class="btn-sec" onclick="closeSheet('sh-action-select')">Отмена</button>
@@ -696,7 +697,8 @@ function switchTab(t){
 }
 
 function handleFabCalClick(){
-  openActionSelect(null);
+  // По умолчанию открываем контекстное меню на сегодня
+  openActionSelect(TDS);
 }
 
 function calMove(dir){
@@ -796,7 +798,6 @@ function buildGrid(){
     if(ds===TDS) c.classList.add('today');
 
     if(holidaySet.has(ds)) {
-      // Если выходной сегодня — крест на клетку не ставим (он пишется текстом в статус-баре)
       if(ds !== TDS){
          c.classList.add('has-holiday');
       }
@@ -817,6 +818,11 @@ function buildGrid(){
       c.style.border = (borderMap[ds]==='#ff3b30') ? `3px solid ${borderMap[ds]}` : `2px solid ${borderMap[ds]}`;
     }
 
+    // Если клетка совпадает с выделенной ячейкой в памяти сессии
+    if(window._currentSelectedDayDate === ds) {
+      c.style.setProperty('box-shadow', '0 0 0 2px #fff inset', 'important');
+    }
+
     c.addEventListener('click',()=>handleCellTap(ds,c));
     g.appendChild(c);
   }
@@ -828,24 +834,23 @@ function buildGrid(){
 
 let tapState={ds:null,timer:null};
 function handleCellTap(ds,cell){
-  if(tapState.ds===ds){
-    clearTimeout(tapState.timer); hideTip();
-    if(window.selCell){window.selCell.style.outline='';window.selCell=null;}
-    tapState={ds:null,timer:null}; openActionSelect(ds);
+  // Логика двойного клика без уродливых плюсов
+  if(window._currentSelectedDayDate === ds){
+    // Второй тап по той же дате -> открываем контекстное меню добавления
+    window._currentSelectedDayDate = null;
+    hideTip();
+    buildGrid();
+    openActionSelect(ds);
   } else {
-    clearTimeout(tapState.timer); hideTip();
-    if(window.selCell) window.selCell.style.outline='';
-    window.selCell=cell; cell.style.outline='2px solid rgba(255,255,255,.55)';
-    tapState.ds=ds; showTip(ds,cell);
-    tapState.timer=setTimeout(()=>{
-      hideTip(); if(window.selCell){window.selCell.style.outline='';window.selCell=null;} tapState={ds:null,timer:null};
-    },2500);
+    // Первый тап -> просто выделяем клетку и смотрим превью
+    window._currentSelectedDayDate = ds;
+    buildGrid();
+    showTip(ds,cell);
   }
 }
 function onDayAddBtn(){
   const ds=window._tapDs; hideTip();
-  if(window.selCell){window.selCell.style.outline='';window.selCell=null;}
-  tapState={ds:null,timer:null}; openActionSelect(ds);
+  openActionSelect(ds);
 }
 function showTip(ds,cell){
   hideTip(); window._tapDs=ds;
@@ -896,7 +901,6 @@ function selectActionType(type){
   }else if(type==='holiday'){
     const data=db();
     if(!data.holidays) data.holidays=[];
-    // Возможность переключения (добавить/удалить выходной)
     if(!data.holidays.includes(targetActionDate)){
       data.holidays.push(targetActionDate);
     } else {
@@ -944,6 +948,14 @@ function toggleRentTech(t, el){
     el.classList.add('on');
   }
 }
+// Возвращаем функции для обработки доп. полей съёмок
+function renderEvExtras(){
+  document.getElementById('ev-extras').innerHTML=evExtras.map((v,i)=>
+    `<div class="extra-item"><input class="extra-inp" placeholder="Примечание..." value="${v.replace(/"/g,'&quot;')}" oninput="evExtras[${i}]=this.value"><button class="btn-rm-ex" onclick="rmEvExtra(${i})">×</button></div>`).join('');
+}
+function addEvExtra(){evExtras.push('');renderEvExtras();}
+function rmEvExtra(i){evExtras.splice(i,1);renderEvExtras();}
+
 function saveRent(){
   const name=document.getElementById('rent-name').value.trim();
   const date=document.getElementById('rent-date').value;
@@ -1025,7 +1037,6 @@ function renderEvSection(data){
         }
       }
       
-      // Рендерим красивый графический Progress Bar
       let stepsHtml = '';
       for(let stepIdx=1; stepIdx<=3; stepIdx++) {
          const fillClass = (st >= stepIdx) ? 'active-fill' : '';
@@ -1164,28 +1175,15 @@ function openEditEvent(id){
   renderEvTypeChips();renderEvExtras();renderProjectColorSelector();openSheet('sh-event');
 }
 function renderEvTypeChips(){
-  document.getElementById('ev-type-chips').innerHTML=[...EV_TYPES,'Своё','Sticky Notes'].map(t=>
+  document.getElementById('ev-type-chips').innerHTML=[...EV_TYPES,'Своё'].map(t=>
     `<div class="chip ${evType===t?'on':''}" onclick="setEvType(this,'${t}')">${t}</div>`).join('');
 }
 function setEvType(el,t){
-  if(t === 'Sticky Notes'){
-    closeSheet('sh-event');
-    document.getElementById('sticky-note-text-input').value = '';
-    openSheet('sh-sticky-note');
-    return;
-  }
   evType=t;
   document.querySelectorAll('#ev-type-chips .chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
   document.getElementById('ev-custom-type').style.display=t==='Своё'?'block':'none';
 }
-
-function renderEvExtras(){
-  document.getElementById('ev-extras').innerHTML=evExtras.map((v,i)=>
-    `<div class="extra-item"><input class="extra-inp" placeholder="Примечание..." value="${v.replace(/"/g,'&quot;')}" oninput="evExtras[${i}]=this.value"><button class="btn-rm-ex" onclick="rmEvExtra(${i})">×</button></div>`).join('');
-}
-function addEvExtra(){evExtras.push('');renderEvExtras();}
-function rmEvExtra(i){evExtras.splice(i,1);renderEvExtras();}
 
 function saveStickyNote(){
   const txt = document.getElementById('sticky-note-text-input').value.trim();
@@ -1270,16 +1268,44 @@ function renderCompletedList(data) {
   document.getElementById('total-earnings-value').textContent = `${totalSum.toLocaleString()} ₽`;
 }
 
+function restoreFromCompleted(id) {
+  const data=db();
+  const index = (data.deleted||[]).findIndex(e=>e.id===id);
+  if(index !== -1) {
+    const ev = data.deleted[index];
+    ev.stage = 0;
+    if(!data.events) data.events = [];
+    data.events.push(ev);
+    data.deleted.splice(index, 1);
+    sv(data); buildGrid(); renderCompletedList(data);
+  }
+}
+
+function permanentlyDelete(id) {
+  showConfirm('Удалить навсегда?','Запись будет безвозвратно стёрта, финансовые средства будут вычтены из статистики.',()=>{
+    const data=db();
+    data.deleted = (data.deleted||[]).filter(e=>e.id!==id);
+    sv(data); renderCompletedList(data);
+  });
+}
+
 function openNotes(evId){
   curNotesEvId=evId;
   const data=db(),ev=data.events.find(e=>e.id===evId);if(!ev)return;
   document.getElementById('shoot-references-area').value = (ev.references || []).join('\n');
+  const frame = document.getElementById('shoot-preview-img-frame');
+  if(ev.mediaPreviewUrl) {
+     frame.style.backgroundImage = `url('${ev.mediaPreviewUrl}')`;
+     frame.style.display = 'block';
+  } else {
+     frame.style.display = 'none';
+  }
   renderAudioTracksList(ev.audioTracks || []);
   renderNoteBlocks(ev.notes||[]);
   openPanel('panel-notes');
 }
 
-/* ПОДГРУЗКА ПРЕВЬЮ-ФАЙЛА С УСТРОЙСТВА */
+/* ИСПРАВЛЕННАЯ ПОДГРУЗКА ФАЙЛА ИЗОБРАЖЕНИЯ */
 function uploadShootPreviewFile(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();
@@ -1289,6 +1315,9 @@ function uploadShootPreviewFile(input) {
       if (ev) {
         ev.mediaPreviewUrl = base64Image;
         sv(data);
+        const frame = document.getElementById('shoot-preview-img-frame');
+        frame.style.backgroundImage = `url('${base64Image}')`;
+        frame.style.display = 'block';
       }
     };
     reader.readAsDataURL(input.files[0]);
@@ -1554,19 +1583,6 @@ function saveEvent(){
   sv(data);closeSheet('sh-event');buildGrid();
   if(curTab==='shoots') renderShootsList();
 }
-
-function openSheet(id){document.getElementById(id).classList.add('open');}
-function closeSheet(id){document.getElementById(id).classList.remove('open');}
-document.querySelectorAll('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s)s.classList.remove('open');}));
-
-let confCb=null;
-function showConfirm(t,m,cb){
-  document.getElementById('conf-title').textContent=t;
-  document.getElementById('conf-msg').textContent=m;
-  confCb=cb;document.getElementById('confirm').classList.add('open');
-}
-function closeConfirm(){document.getElementById('confirm').classList.remove('open');confCb=null;}
-document.getElementById('conf-ok').onclick=()=>{if(confCb)confCb();closeConfirm();};
 
 function fabFlashClick(){
   editMode=false;nfState={name:'',size:'64',colorHex:'#374151',brand:''};
