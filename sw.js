@@ -1,6 +1,7 @@
-const CACHE = 'snimki-v10';
+const CACHE = 'snimki-v12';
 const ASSETS = [
   './index.html',
+  './style.css',
   './manifest.json',
   './icon.png',
   './bg1.JPG',
