@@ -2,9 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Снято">
@@ -205,7 +203,6 @@ function renderAuthUI(user){
 <button class="btn-today" id="btn-today" onclick="goToToday()">↑ Сегодня</button>
 <button class="day-add-btn" id="day-add-btn" onclick="onDayAddBtn()">+</button>
 
-<!-- Morning overlay -->
 <div class="morning-overlay" id="morning-overlay">
   <div class="morning-box">
     <div class="morning-date" id="morning-date"></div>
@@ -215,7 +212,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Panel: Flash detail -->
 <div class="panel" id="panel-flash">
   <div class="panel-hdr">
     <button class="btn-back" onclick="closePanel('panel-flash')">Назад</button>
@@ -236,7 +232,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Panel: Completed -->
 <div class="panel" id="panel-completed">
   <div class="panel-hdr">
     <button class="btn-back" onclick="closePanel('panel-completed')">Назад</button>
@@ -254,7 +249,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Panel: Notes -->
 <div class="panel" id="panel-notes">
   <div class="panel-hdr">
     <button class="btn-back" onclick="closePanel('panel-notes')">Назад</button>
@@ -270,7 +264,8 @@ function renderAuthUI(user){
     </div>
     <div style="margin-bottom:16px;">
       <div class="fld-lbl" style="margin-bottom:6px;">Референсы (ссылки построчно)</div>
-      <textarea class="fld-inp" id="shoot-references-area" style="min-height:70px;" placeholder="https://youtube.com/...&#10;https://pinterest.com/..." onchange="saveShootReferences()"></textarea>
+      <textarea class="fld-inp" id="shoot-references-area" style="min-height:70px;" placeholder="https://youtube.com/...
+https://pinterest.com/..." onchange="saveShootReferences()"></textarea>
     </div>
     <div style="margin-bottom:16px;">
       <div class="fld-lbl" style="margin-bottom:6px;">Голосовые / Аудио заметки</div>
@@ -283,7 +278,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Panel: Production -->
 <div class="panel" id="panel-production">
   <div class="panel-hdr">
     <button class="btn-back" onclick="closeProductionPanel()">Выйти</button>
@@ -320,7 +314,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Sheet: Sticky note -->
 <div class="sheet" id="sh-sticky-note">
   <div class="sheet-in" style="height:auto;max-height:45vh;padding-bottom:32px;">
     <div class="handle"></div>
@@ -334,7 +327,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Sheet: Archive parameters -->
 <div class="sheet" id="sh-archive-parameters">
   <div class="sheet-in" style="height:auto;max-height:50vh;padding-bottom:32px;">
     <div class="handle"></div>
@@ -351,13 +343,12 @@ function renderAuthUI(user){
     </div>
     <div class="fld">
       <div class="fld-lbl">Сколько заработал (₽)</div>
-      <input class="fld-inp" id="archive-earnings-input" type="number" placeholder="Заработок в рублях">
+      <input class="fld-inp" id="archive-earnings-input" type="number" placeholder="Заработок в рублей">
     </div>
     <div class="btn-prim" style="background:var(--green);" onclick="confirmProjectArchivation()">Завершить съёмку</div>
   </div>
 </div>
 
-<!-- Sheet: Scene task -->
 <div class="sheet" id="sh-scene-task">
   <div class="sheet-in" style="height:auto;max-height:40vh;padding-bottom:32px;">
     <div class="handle"></div>
@@ -370,7 +361,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Sheet: Action select -->
 <div class="sheet" id="sh-action-select">
   <div class="sheet-in" style="height:auto;max-height:55vh;padding-bottom:32px;">
     <div class="handle"></div>
@@ -383,7 +373,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Sheet: Rent -->
 <div class="sheet" id="sh-rent">
   <div class="sheet-in">
     <div class="handle"></div>
@@ -399,7 +388,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Sheet: Flash -->
 <div class="sheet" id="sh-flash">
   <div class="sheet-in">
     <div class="handle"></div>
@@ -413,7 +401,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Sheet: Add to flash -->
 <div class="sheet" id="sh-add-to-flash">
   <div class="sheet-in">
     <div class="handle"></div>
@@ -423,7 +410,6 @@ function renderAuthUI(user){
   </div>
 </div>
 
-<!-- Sheet: Event -->
 <div class="sheet" id="sh-event">
   <div class="sheet-in">
     <div class="handle"></div>
@@ -736,7 +722,6 @@ function buildGrid(){
     const ds=`${calY}-${p2(calM+1)}-${p2(d)}`;
     const c=document.createElement('div');c.className='cal-cell';
 
-    // ИСПРАВЛЕНИЕ: цифра теперь в отдельном span с абсолютным позиционированием
     const numSpan=document.createElement('span');
     numSpan.className='cal-cell-number';
     numSpan.textContent=d;
@@ -964,7 +949,7 @@ function confirmProjectArchivation(){
 
 // ===== ADD / EDIT EVENT =====
 function renderEvExtras(){
-  document.getElementById('ev-extras').innerHTML=evExtras.map((v,i)=>`<div class="extra-item"><input class="extra-inp" placeholder="Примечание..." value="${v.replace(/"/g,'&quot;')}" oninput="evExtras[${i}]=this.value"><button class="btn-rm-ex" onclick="rmEvExtra(${i})">×</button></div>`).join('');
+  document.getElementById('ev-extras').innerHTML=evExtras.map((v,i)=>`<div class="extra-item"><input class="extra-inp" placeholder="Примечание..." value="${v.replace(/"/g,'"')}" oninput="evExtras[${i}]=this.value"><button class="btn-rm-ex" onclick="rmEvExtra(${i})">?</button></div>`).join('');
 }
 function addEvExtra(){evExtras.push('');renderEvExtras();}
 function rmEvExtra(i){evExtras.splice(i,1);renderEvExtras();}
@@ -1030,7 +1015,7 @@ function renderShootsList(){
       const typeStr=ev.type?`[${ev.type}] `:'';
       let meta=ev.date||'—';if(ev.time)meta+=` · ${ev.time}`;if(ev.deadline)meta+=` · ⏱ до ${ev.deadline}`;
       const hasPreview=ev.mediaPreviewUrl?`background-image:url('${ev.mediaPreviewUrl}')`:`background:${ev.color||'#ff9500'}`;
-      return `<div class="src-card"><div class="src-preview-header" style="${hasPreview}"><div class="src-preview-mask"></div><div class="src-header-info-wrapper"><div class="src-info"><div class="src-name">${typeStr}${ev.clientName||'Без имени'}</div><div class="src-meta" style="color:rgba(255,255,255,0.7);">${meta}</div></div></div></div><div class="src-btns"><button class="btn-src-edit" onclick="openEditEvent('${ev.id}')">✏️ Ред.</button><button class="btn-src-open" onclick="openNotes('${ev.id}')">Перейти →</button></div></div>`;
+      return `<div class="src-card"><div class="src-preview-header" style="${hasPreview}"><div class="src-preview-mask"></div><div class="src-header-info-wrapper"><div class="src-info"><div class="src-name">${typeStr}${ev.clientName||'Без имени'}</div><div class="src-meta" style="color:rgba(255,255,255,0.7);">${meta}</div></div></div></div><div class="src-btns"><button class="btn-src-edit" onclick="openEditEvent('${ev.id}')">✏️ Ред.</button><button class="btn-src-open" onclick="openNotes('${ev.id}')">Перейти ?</button></div></div>`;
     }).join('');
   }
   renderCompletedList(data);
@@ -1045,8 +1030,8 @@ function renderCompletedList(data){
   let totalSum=0;
   list.innerHTML=completedList.map(ev=>{
     const typeStr=ev.type?`[${ev.type}] `:'';const score=ev.rating||0;const cash=ev.earnings||0;totalSum+=cash;
-    let starsStr='';for(let i=1;i<=5;i++)starsStr+=i<=score?'★':'☆';
-    return `<div class="done-card"><div class="done-card-info"><div class="done-card-name">${typeStr}${ev.clientName||'Без имени'}</div><div class="done-card-meta">${ev.date||'—'} · <span style="color:var(--yellow)">${starsStr}</span> · ${cash} ₽</div></div><div class="done-card-actions"><button class="btn-back-stage" onclick="restoreFromCompleted('${ev.id}')">Вернуть</button><button class="btn-done-del" onclick="permanentlyDelete('${ev.id}')">×</button></div></div>`;
+    let starsStr='';for(let i=1;i<=5;i++)starsStr+=i<=score?'?':'?';
+    return `<div class="done-card"><div class="done-card-info"><div class="done-card-name">${typeStr}${ev.clientName||'Без имени'}</div><div class="done-card-meta">${ev.date||'—'} · <span style="color:var(--yellow)">${starsStr}</span> · ${cash} ₽</div></div><div class="done-card-actions"><button class="btn-back-stage" onclick="restoreFromCompleted('${ev.id}')">Вернуть</button><button class="btn-done-del" onclick="permanentlyDelete('${ev.id}')">?</button></div></div>`;
   }).join('');
   document.getElementById('total-earnings-value').textContent=`${totalSum.toLocaleString()} ₽`;
 }
@@ -1107,11 +1092,11 @@ function renderAudioTracksList(tracks){
   document.getElementById('shoot-audio-tracks-container').innerHTML=(tracks||[]).map(t=>`<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);padding:6px 10px;border-radius:10px;"><span style="font-size:12px;color:rgba(255,255,255,0.5)">Запись ${t.date}</span><audio src="${t.dataUrl}" controls style="height:28px;flex:1;"></audio></div>`).join('');
 }
 function renderNoteBlocks(notes){
-  document.getElementById('notes-blocks-container').innerHTML=(notes||[]).map((n,i)=>`<div class="note-block"><button class="btn-rm-note" onclick="rmNoteBlock(${i})">×</button><textarea class="note-textarea" placeholder="Введите заметку..." oninput="autoResize(this);saveNoteBlock(${i},this.value)">${escHtml(n||'')}</textarea></div>`).join('');
+  document.getElementById('notes-blocks-container').innerHTML=(notes||[]).map((n,i)=>`<div class="note-block"><button class="btn-rm-note" onclick="rmNoteBlock(${i})">?</button><textarea class="note-textarea" placeholder="Введите заметку..." oninput="autoResize(this);saveNoteBlock(${i},this.value)">${escHtml(n||'')}</textarea></div>`).join('');
   document.querySelectorAll('.note-textarea').forEach(autoResize);
 }
 function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
-function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escHtml(s){return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');}
 function addNoteBlock(){const data=db(),ev=data.events.find(e=>e.id===curNotesEvId);if(!ev)return;if(!ev.notes)ev.notes=[];ev.notes.push('');sv(data);renderNoteBlocks(ev.notes);}
 function saveNoteBlock(i,val){const data=db(),ev=data.events.find(e=>e.id===curNotesEvId);if(!ev)return;if(!ev.notes)ev.notes=[];ev.notes[i]=val;sv(data);}
 function rmNoteBlock(i){const data=db(),ev=data.events.find(e=>e.id===curNotesEvId);if(!ev)return;if(!ev.notes)ev.notes=[];ev.notes.splice(i,1);sv(data);renderNoteBlocks(ev.notes);}
@@ -1260,7 +1245,7 @@ function renderPanelShoots(f){
   if(!(f.shootings||[]).length){el.innerHTML='<div class="no-items">Нет съёмок на флешке</div>';return;}
   el.innerHTML=f.shootings.map(s=>{
     const hd=!!s.hardDone,bd=!!s.backupDone;
-    return `<div class="shoot-item"><button class="btn-rm" onclick="rmShoot('${s.id}')">×</button><div class="si-name">${s.name||'Без названия'}</div><div class="si-meta">📅 ${s.date||'—'} &nbsp;⏱ ${s.deadline||'—'}</div><div class="shoot-checks"><div class="chk-row" onclick="toggleShootCheck('${s.id}','hardDone')"><div class="chk-box ${hd?'checked':''}"></div><div class="chk-lbl">Загрузил на хард</div></div><div class="chk-row" onclick="toggleShootCheck('${s.id}','backupDone')"><div class="chk-box ${bd?'checked':''}"></div><div class="chk-lbl">Бэкап на облако</div></div></div></div>`;
+    return `<div class="shoot-item"><button class="btn-rm" onclick="rmShoot('${s.id}')">?</button><div class="si-name">${s.name||'Без названия'}</div><div class="si-meta">📅 ${s.date||'—'}  ⏱ ${s.deadline||'—'}</div><div class="shoot-checks"><div class="chk-row" onclick="toggleShootCheck('${s.id}','hardDone')"><div class="chk-box ${hd?'checked':''}"></div><div class="chk-lbl">Загрузил на хард</div></div><div class="chk-row" onclick="toggleShootCheck('${s.id}','backupDone')"><div class="chk-box ${bd?'checked':''}"></div><div class="chk-lbl">Бэкап на облако</div></div></div></div>`;
   }).join('');
 }
 function toggleShootCheck(sid,field){
