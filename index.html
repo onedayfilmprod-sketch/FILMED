@@ -14,13 +14,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Climate+Crisis&family=Russo+One&family=Commissioner:wght@700&family=Hachi+Maru+Pop&family=Stick&family=Delta+Gothic+One&family=Yuji+Boku&family=Seymour+One&family=Rubik+Scribble&family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-/* Критичные стили — гарантируют что оверлеи не блокируют UI до загрузки CSS */
-.morning-overlay{position:fixed;inset:0;z-index:999;opacity:0;pointer-events:none;}
-.morning-overlay.open{opacity:1;pointer-events:all;}
-.confirm{position:fixed;inset:0;z-index:9999;opacity:0;pointer-events:none;}
-.confirm.open{opacity:1;pointer-events:all;}
-.sheet{position:fixed;inset:0;z-index:300;opacity:0;pointer-events:none;}
-.sheet.open{opacity:1;pointer-events:all;}
+/* Заменяем opacity и pointer-events на жесткий display: none */
+.morning-overlay{position:fixed;inset:0;z-index:999;display:none;align-items:center;justify-content:center;}
+.morning-overlay.open{display:flex;}
+
+.confirm{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;}
+.confirm.open{display:flex;}
+
+.sheet{position:fixed;inset:0;z-index:300;display:none;align-items:flex-end;}
+.sheet.open{display:flex;}
+
 .panel{position:fixed;inset:0;z-index:200;transform:translateX(100%);}
 .panel.open{transform:translateX(0);}
 .bg-overlay{position:absolute;inset:0;pointer-events:none;}
