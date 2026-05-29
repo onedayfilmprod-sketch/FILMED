@@ -1,4 +1,4 @@
-const CACHE = 'snimki-v15';
+const CACHE = 'snimki-v16';
 const ASSETS = [
   './index.html',
   './style.css',
