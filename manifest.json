@@ -1,8 +1,10 @@
 {
-  "name": "Съёмки",
-  "short_name": "Съёмки",
+  "name": "Снято",
+  "short_name": "Снято",
   "description": "Помощник для съёмок: календарь, флешки и заметки",
   "start_url": "./index.html",
+  "scope": "./",
+  "id": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0a0a",
