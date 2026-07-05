@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Снято">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<title>Снято</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Climate+Crisis&family=Russo+One&family=Commissioner:wght@700&family=Hachi+Maru+Pop&family=Stick&family=Delta+Gothic+One&family=Yuji+Boku&family=Seymour+One&family=Rubik+Scribble&family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import{getFirestore,doc,setDoc,getDoc,onSnapshot}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig={
+  apiKey:"AIzaSyBiLCbsCSjOM4rsMKWw26YBjCdA6ITBRkA",
+  authDomain:"filmed-475a1.firebaseapp.com",
+  projectId:"filmed-475a1",
+  storageBucket:"filmed-475a1.firebasestorage.app",
+  messagingSenderId:"375805990086",
+  appId:"1:375805990086:web:aa4f75cc3ea19ac4b973c7"
+};
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const fsdb=getFirestore(app);
+const provider=new GoogleAuthProvider();
+
+let _unsubscribe=null;
+let _fbUid=null;
+
+window._fbSignIn=async()=>{
+  try{await signInWithPopup(auth,provider);}catch(e){console.error(e);}
+};
+window._fbSignOut=async()=>{
+  if(_unsubscribe){_unsubscribe();_unsubscribe=null;}
+  await signOut(auth);
+  _fbUid=null;
+  renderAuthUI(null);
+};
+
+window._fbSave=async(data)=>{
+  if(!_fbUid) return;
+  try{
+    await setDoc(doc(fsdb,'users',_fbUid),{data:JSON.stringify(data)},{merge:true});
+  }catch(e){console.error('FB save error',e);}
+};
+
+onAuthStateChanged(auth,async(user)=>{
+  renderAuthUI(user);
+  if(!user){_fbUid=null;if(_unsubscribe){_unsubscribe();_unsubscribe=null;}return;}
+  _fbUid=user.uid;
+
+  const snap=await getDoc(doc(fsdb,'users',user.uid));
+  if(snap.exists()&&snap.data().data){
+    try{
+      const remote=JSON.parse(snap.data().data);
+      localStorage.setItem('_db_v2',JSON.stringify(remote));
+      if(window.buildGrid) window.buildGrid();
+      if(window.renderFlashList) window.renderFlashList();
+      if(window.renderShootsList) window.renderShootsList();
+    }catch(e){}
+  }
+
+  if(_unsubscribe) _unsubscribe();
+  _unsubscribe=onSnapshot(doc(fsdb,'users',user.uid),snap=>{
+    if(!snap.exists()) return;
+    try{
+      const remote=JSON.parse(snap.data().data||'{}');
+      const remoteStr=JSON.stringify(remote);
+      const localStr=localStorage.getItem('_db_v2');
+      if(remoteStr!==localStr){
+        localStorage.setItem('_db_v2',remoteStr);
+        if(window.buildGrid) window.buildGrid();
+        if(window.renderFlashList) window.renderFlashList();
+        if(window.renderShootsList) window.renderShootsList();
+      }
+    }catch(e){}
+  });
+});
+
+function renderAuthUI(user){
+  const btn=document.getElementById('auth-btn');
+  if(!btn) return;
+  if(user){
+    btn.onclick=window._fbSignOut;
+    btn.title='Выйти';
+    btn.style.background='rgba(52,199,89,.2)';
+    btn.style.color='#34c759';
+    btn.innerHTML='<span style="width:22px;height:22px;border-radius:50%;background:'+(user.photoURL?'url('+user.photoURL+') center/cover':'rgba(255,255,255,.2)')+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;overflow:hidden">'+(user.photoURL?`<img src="${user.photoURL}" style="width:100%;height:100%;object-fit:cover">`:(user.displayName||'U')[0].toUpperCase())+'</span>';
+  }else{
+    btn.onclick=window._fbSignIn;
+    btn.title='Войти через Google';
+    btn.style.background='rgba(255,255,255,.1)';
+    btn.style.color='#fff';
+    btn.innerHTML='G';
+  }
+}
+</script>
+</head>
+<body>
+<div class="desktop-wrap">
+<div class="app-frame">
+
+<div class="bg-layer" id="bg-layer">
+  <div class="bg-img" id="bg-a"></div>
+  <div class="bg-img" id="bg-b"></div>
+  <div class="bg-overlay"></div>
+</div>
+
+<div class="app">
+  <div class="statusbar-pad"></div>
+  <div class="topbar">
+    <div class="app-row">
+      <div class="app-name" id="app-name">СНЯТО</div>
+      <button id="auth-btn" onclick="window._fbSignIn&&window._fbSignIn()" title="Войти через Google" style="margin-left:auto;width:34px;height:34px;border-radius:10px;border:none;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s">G</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('calendar')">Календарь</button>
+      <button class="tab" onclick="switchTab('flash')">Флешки</button>
+      <button class="tab" onclick="switchTab('shoots')">Съёмка</button>
+    </div>
+  </div>
+
+  <div class="status-strip" id="status-strip"></div>
+  <div class="sticky-banner-container" id="sticky-notes-banner-area"></div>
+
+  <div class="scroll" id="main-scroll">
+    <div class="section active" id="sec-calendar">
+      <div class="cal-outer">
+        <div class="cal-wrap" id="cal-wrap-el">
+          <div class="cal-nav">
+            <div class="cal-month-txt" id="cal-label"></div>
+            <div class="cal-nav-btns">
+              <button class="cal-nbtn" onclick="calMove(-1)">‹</button>
+              <button class="cal-nbtn" onclick="calMove(1)">›</button>
+            </div>
+          </div>
+          <div class="cal-wdays" id="cal-wdays"></div>
+          <div class="cal-grid-wrap">
+            <div class="cal-grid settled" id="cal-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rent-sort-section" id="rent-sort-section">
+        <div class="ev-group-label">Аренда техники</div>
+        <div id="rent-sort-list"></div>
+      </div>
+
+      <div class="ev-section">
+        <div class="ev-container-wrapper" id="ev-section-container"></div>
+      </div>
+    </div>
+
+    <div class="section" id="sec-flash">
+      <div class="flash-section">
+        <div class="flash-list" id="flash-list"></div>
+        <div class="empty-st" id="flash-empty" style="display:none">
+          <div class="ei">💾</div><p>Нет флешек. Нажми + чтобы добавить</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="sec-shoots">
+      <div class="shoots-section">
+        <div class="shoots-list" id="shoots-list"></div>
+        <div class="empty-st" id="shoots-empty" style="display:none">
+          <div class="ei">🎬</div><p>Нет съёмок. Нажми + чтобы добавить</p>
+        </div>
+        <button class="btn-completed-toggle" id="btn-completed-toggle" onclick="openPanel('panel-completed')">
+          ✓ Завершённые съёмки
+          <span class="ct-arr">›</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="fab" id="fab-cal" style="display:flex;" onclick="handleFabCalClick()">+</button>
+<button class="fab" id="fab-flash" onclick="fabFlashClick()">+</button>
+<button class="fab" id="fab-shoots" onclick="openActionSelect(null)">+</button>
+<button class="btn-today" id="btn-today" onclick="goToToday()">↑ Сегодня</button>
+<button class="day-add-btn" id="day-add-btn" onclick="onDayAddBtn()">+</button>
+
+<!-- Morning overlay -->
+<div class="morning-overlay" id="morning-overlay">
+  <div class="morning-box">
+    <div class="morning-date" id="morning-date"></div>
+    <div class="morning-title" id="morning-title"></div>
+    <div class="morning-items" id="morning-items"></div>
+    <button class="btn-morning-close" onclick="closeMorning()">Понял, поехали</button>
+  </div>
+</div>
+
+<!-- Panel: Flash detail -->
+<div class="panel" id="panel-flash">
+  <div class="panel-hdr">
+    <button class="btn-back" onclick="closePanel('panel-flash')">Назад</button>
+    <div class="panel-ttl" id="pd-title-txt">Флешка</div>
+    <button class="btn-params" onclick="openEditFlash()">Параметры</button>
+  </div>
+  <div class="panel-body">
+    <div class="hero-card" id="pd-hero"></div>
+    <div class="shoots-hdr">
+      <span class="shoots-lbl">Съёмки на флешке</span>
+      <button class="btn-add-r" style="background:var(--red);color:#fff;border:none;width:30px;height:30px;border-radius:9px;font-size:20px;cursor:pointer;" onclick="openAddToFlash()">+</button>
+    </div>
+    <div id="pd-shoots"></div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn-erase" onclick="doErase()">🗑 Стереть (очистить съёмки)</button>
+    <button class="btn-del-flash" onclick="doDeleteFlash()">Удалить флешку</button>
+  </div>
+</div>
+
+<!-- Panel: Completed -->
+<div class="panel" id="panel-completed">
+  <div class="panel-hdr">
+    <button class="btn-back" onclick="closePanel('panel-completed')">Назад</button>
+    <div class="panel-ttl">Завершённые</div>
+  </div>
+  <div class="panel-body">
+    <div id="completed-list"></div>
+    <div class="empty-st" id="completed-empty" style="display:none">
+      <div class="ei">✓</div><p>Нет завершённых съёмок</p>
+    </div>
+    <div class="financial-stats-box" id="completed-financial-box" style="display:none">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,0.5)">Общий заработок</div>
+      <div style="font-size:24px;font-weight:800;color:var(--green);margin-top:4px;" id="total-earnings-value">0 ₽</div>
+    </div>
+  </div>
+</div>
+
+<!-- Panel: Notes -->
+<div class="panel" id="panel-notes">
+  <div class="panel-hdr">
+    <button class="btn-back" onclick="closePanel('panel-notes')">Назад</button>
+    <div class="panel-ttl" id="notes-panel-title">Редактирование</div>
+  </div>
+  <div class="panel-body">
+    <div class="fld">
+      <div class="fld-lbl">Превью-изображение съёмки</div>
+      <div class="file-upload-wrapper">
+        <input type="file" id="shoot-media-file-uploader" accept="image/*" class="file-upload-input" onchange="uploadShootPreviewFile(this)">
+      </div>
+      <div id="shoot-preview-img-frame" style="margin-top:10px;display:none;width:100%;height:120px;border-radius:12px;background-size:cover;background-position:center;"></div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div class="fld-lbl" style="margin-bottom:6px;">Референсы (ссылки построчно)</div>
+      <textarea class="fld-inp" id="shoot-references-area" style="min-height:70px;" placeholder="https://youtube.com/...&#10;https://pinterest.com/..." onchange="saveShootReferences()"></textarea>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div class="fld-lbl" style="margin-bottom:6px;">Голосовые / Аудио заметки</div>
+      <button class="btn-prim" id="btn-audio-record-toggle" style="background:var(--blue);margin-top:0;padding:10px;" onclick="toggleAudioRecording()">🎙 Начать запись</button>
+      <div id="shoot-audio-tracks-container" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+    <div style="margin-bottom:6px;"><span class="fld-lbl">Заметки съёмки</span></div>
+    <button class="btn-prim" style="background:rgba(255,255,255,0.1);margin-top:0;margin-bottom:12px;width:100%;padding:12px;" onclick="addNoteBlock()">＋ Добавить заметку</button>
+    <div id="notes-blocks-container"></div>
+  </div>
+</div>
+
+<!-- Panel: Production -->
+<div class="panel" id="panel-production">
+  <div class="panel-hdr">
+    <button class="btn-back" onclick="closeProductionPanel()">Выйти</button>
+    <div class="panel-ttl" id="production-panel-title">Режим съёмки</div>
+  </div>
+  <div class="prod-nav-tabs">
+    <button class="prod-nav-btn active" id="p-nav-shotlist" onclick="switchProductionTab('shotlist')">Shotlist</button>
+    <button class="prod-nav-btn" id="p-nav-tech" onclick="switchProductionTab('tech')">Оборудование</button>
+    <button class="prod-nav-btn" id="p-nav-notes" onclick="switchProductionTab('notes')">Заметки</button>
+  </div>
+  <div class="panel-body">
+    <div class="prod-tab-pane active" id="prod-pane-shotlist">
+      <button class="btn-prim" style="background:var(--lightblue);margin-bottom:16px;margin-top:0;" onclick="createProductionScene()">🎬 Создать сцену</button>
+      <div id="production-scenes-root"></div>
+    </div>
+    <div class="prod-tab-pane" id="prod-pane-tech">
+      <div id="prod-tech-setup-phase">
+        <div class="fld-lbl" style="margin-bottom:10px;">Выберите оборудование на съёмку:</div>
+        <div id="prod-tech-selector-chips" class="chips" style="margin-bottom:20px;"></div>
+        <button class="btn-prim" style="background:var(--green);" onclick="advanceProductionTechPhase()">Далее →</button>
+      </div>
+      <div id="prod-tech-field-phase" style="display:none;">
+        <div class="fld-lbl" style="margin-bottom:10px;">Чеклист оборудования на локации:</div>
+        <div id="prod-tech-field-checklist" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn-prim" style="flex:1;background:var(--orange);margin-top:0;" onclick="triggerProductionTechReset('move')">🚚 Переезд</button>
+          <button class="btn-prim" style="flex:1;background:var(--red);margin-top:0;" onclick="triggerProductionTechReset('finish')">🏁 Завершить</button>
+        </div>
+      </div>
+    </div>
+    <div class="prod-tab-pane" id="prod-pane-notes">
+      <textarea class="fld-inp" id="prod-quick-notes-textarea" style="min-height:350px;font-size:16px;" placeholder="Быстрые заметки на съёмочной площадке..." onchange="saveProductionQuickNotes()"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Sheet: Sticky note -->
+<div class="sheet" id="sh-sticky-note">
+  <div class="sheet-in" style="height:auto;max-height:45vh;padding-bottom:32px;">
+    <div class="handle"></div>
+    <div class="sh-title">Добавить Sticky Note</div>
+    <div class="fld">
+      <div class="fld-lbl">Текст заметки на день</div>
+      <input class="fld-inp" id="sticky-note-text-input" type="text" placeholder="⚠️ Не забыть ND filter">
+    </div>
+    <button class="btn-prim" onclick="saveStickyNote()">Сохранить заметку</button>
+    <button class="btn-sec" onclick="closeSheet('sh-sticky-note')">Отмена</button>
+  </div>
+</div>
+
+<!-- Sheet: Archive parameters -->
+<div class="sheet" id="sh-archive-parameters">
+  <div class="sheet-in" style="height:auto;max-height:50vh;padding-bottom:32px;">
+    <div class="handle"></div>
+    <div class="sh-title">Завершение проекта</div>
+    <div class="fld">
+      <div class="fld-lbl">Рейтинг проекта</div>
+      <div class="chips" id="archive-rating-chips" style="gap:10px;justify-content:center;">
+        <span class="star" style="font-size:32px;cursor:pointer;color:#333;" onclick="setArchiveRatingScore(1)">★</span>
+        <span class="star" style="font-size:32px;cursor:pointer;color:#333;" onclick="setArchiveRatingScore(2)">★</span>
+        <span class="star" style="font-size:32px;cursor:pointer;color:#333;" onclick="setArchiveRatingScore(3)">★</span>
+        <span class="star" style="font-size:32px;cursor:pointer;color:#333;" onclick="setArchiveRatingScore(4)">★</span>
+        <span class="star" style="font-size:32px;cursor:pointer;color:#333;" onclick="setArchiveRatingScore(5)">★</span>
+      </div>
+    </div>
+    <div class="fld">
+      <div class="fld-lbl">Сколько заработал (₽)</div>
+      <input class="fld-inp" id="archive-earnings-input" type="number" placeholder="Заработок в рублях">
+    </div>
+    <div class="btn-prim" style="background:var(--green);" onclick="confirmProjectArchivation()">Завершить съёмку</div>
+  </div>
+</div>
+
+<!-- Sheet: Scene task -->
+<div class="sheet" id="sh-scene-task">
+  <div class="sheet-in" style="height:auto;max-height:40vh;padding-bottom:32px;">
+    <div class="handle"></div>
+    <div class="sh-title">Добавить чекбокс плана</div>
+    <div class="fld">
+      <div class="fld-lbl">Название кадра / плана</div>
+      <input class="fld-inp" id="scene-task-name-input" type="text" placeholder="Интервью, Общий план здания...">
+    </div>
+    <button class="btn-prim" onclick="saveProductionSceneTask()">Добавить</button>
+  </div>
+</div>
+
+<!-- Sheet: Action select -->
+<div class="sheet" id="sh-action-select">
+  <div class="sheet-in" style="height:auto;max-height:55vh;padding-bottom:32px;">
+    <div class="handle"></div>
+    <div class="sh-title" id="sh-action-title">Выберите действие</div>
+    <button class="btn-prim" style="margin-bottom:10px;background:var(--orange)" onclick="selectActionType('shoot')">🎬 Съёмка</button>
+    <button class="btn-prim" style="margin-bottom:10px;background:var(--red)" onclick="selectActionType('holiday')">❌ Выходной (Вкл/Выкл)</button>
+    <button class="btn-prim" style="margin-bottom:10px;background:var(--blue)" onclick="selectActionType('rent')">📦 Аренда</button>
+    <button class="btn-prim" style="margin-bottom:10px;background:var(--yellow);color:#000;font-weight:800;" onclick="selectActionType('sticky')">📌 Sticky Notes</button>
+    <button class="btn-sec" onclick="closeSheet('sh-action-select')">Отмена</button>
+  </div>
+</div>
+
+<!-- Sheet: Rent -->
+<div class="sheet" id="sh-rent">
+  <div class="sheet-in">
+    <div class="handle"></div>
+    <div class="sh-title" id="sh-rent-title">Новая аренда</div>
+    <div class="fld"><div class="fld-lbl">Имя клиента</div><input class="fld-inp" id="rent-name" type="text" placeholder="Имя"></div>
+    <div class="fld"><div class="fld-lbl">Дата</div><input class="fld-inp" id="rent-date" type="date"></div>
+    <div class="fld">
+      <div class="fld-lbl">Что сдается в аренду</div>
+      <div class="chips" id="rent-tech-chips"></div>
+    </div>
+    <button class="btn-prim" style="background:var(--blue);box-shadow:0 4px 16px rgba(0,122,255,.4)" onclick="saveRent()">Сохранить</button>
+    <div class="btn-sec" onclick="closeSheet('sh-rent')">Отмена</div>
+  </div>
+</div>
+
+<!-- Sheet: Flash -->
+<div class="sheet" id="sh-flash">
+  <div class="sheet-in">
+    <div class="handle"></div>
+    <div class="sh-title" id="sh-flash-title">Новая флешка</div>
+    <div class="fld"><div class="fld-lbl">Название</div><input class="fld-inp" id="nf-name" type="text" placeholder="Название флешки"></div>
+    <div class="fld"><div class="fld-lbl">Объём памяти</div><div class="chips" id="nf-size"></div></div>
+    <div class="fld"><div class="fld-lbl">Цвет</div><div class="color-row" id="nf-color"></div></div>
+    <div class="fld"><div class="fld-lbl">Производитель</div><div class="chips" id="nf-brand"></div></div>
+    <button class="btn-prim" id="nf-btn" onclick="saveFlash()">Добавить</button>
+    <div class="btn-sec" onclick="closeSheet('sh-flash')">Отмена</div>
+  </div>
+</div>
+
+<!-- Sheet: Add to flash -->
+<div class="sheet" id="sh-add-to-flash">
+  <div class="sheet-in">
+    <div class="handle"></div>
+    <div class="sh-title">Добавить съёмку</div>
+    <div id="add-to-flash-list"></div>
+    <div class="btn-sec" onclick="closeSheet('sh-add-to-flash')">Отмена</div>
+  </div>
+</div>
+
+<!-- Sheet: Event -->
+<div class="sheet" id="sh-event">
+  <div class="sheet-in">
+    <div class="handle"></div>
+    <div class="sh-title" id="sh-event-title">Новая съёмка</div>
+    <div class="fld">
+      <div class="fld-lbl">Тип</div>
+      <div class="chips" id="ev-type-chips"></div>
+      <input class="fld-inp" id="ev-custom-type" type="text" placeholder="Свой тип..." style="margin-top:8px;display:none">
+    </div>
+    <div class="fld"><div class="fld-lbl">Имя клиента</div><input class="fld-inp" id="ev-name" type="text" placeholder="Имя"></div>
+    <div class="fld"><div class="fld-lbl">Дата съёмки</div><input class="fld-inp" id="ev-date" type="date"></div>
+    <div class="fld"><div class="fld-lbl">Время</div><input class="fld-inp" id="ev-time" type="time"></div>
+    <div class="fld"><div class="fld-lbl">Дедлайн (необязательно)</div><input class="fld-inp" id="ev-deadline" type="date"></div>
+    <div class="fld">
+      <div class="fld-lbl">Цвет проекта (обязательно)</div>
+      <div class="color-row" id="ev-color-selector"></div>
+    </div>
+    <div class="fld"><div class="fld-lbl">Телефон</div><input class="fld-inp" id="ev-phone" type="tel" placeholder="+7"></div>
+    <div class="fld"><div class="fld-lbl">Ссылка (соцсети)</div><input class="fld-inp" id="ev-link" type="url" placeholder="https://..."></div>
+    <div id="ev-extras"></div>
+    <button class="btn-prim" style="background:rgba(255,255,255,0.1);margin-top:0;margin-bottom:10px;padding:10px;" onclick="addEvExtra()">＋ Дополнительное поле</button>
+    <button class="btn-prim" onclick="saveEvent()">Сохранить</button>
+    <div class="btn-sec" onclick="closeSheet('sh-event')">Отмена</div>
+  </div>
+</div>
+
+<div class="day-tip" id="day-tip"></div>
+
+<div class="confirm" id="confirm">
+  <div class="conf-box">
+    <h3 id="conf-title"></h3>
+    <p id="conf-msg" style="font-size:14px;color:rgba(255,255,255,0.6);margin-top:6px;"></p>
+    <div class="conf-btns">
+      <button class="cno" onclick="closeConfirm()">Отмена</button>
+      <button class="cyes" id="conf-ok">Удалить</button>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script>
+const SIZES=['16','32','64','128','256'];
+const BRANDS=['Transcend','SanDisk','Kingston','Samsung'];
+const EV_TYPES=['Свадьба','Мероприятие','Реклама','Предметка'];
+const TECH_LIST=['Sony','GoPro','GH5','Zoom H1','Rode Go','Свет','Батарейки','SSD'];
+const COLORS=[
+  {name:'Серый',hex:'#374151'},{name:'Синий',hex:'#007aff'},
+  {name:'Зелёный',hex:'#34c759'},{name:'Красный',hex:'#ff3b30'},
+  {name:'Оранжевый',hex:'#ff9500'},{name:'Жёлтый',hex:'#ffcc00'},
+  {name:'Белый',hex:'#e5e7eb'},
+];
+const PROJECT_COLORS=[
+  '#AEC6CF','#FFB3BA','#FFDFBA','#FFFFBA','#BFFCC6','#C7CEEA',
+  '#FFC6FF','#E8AEB7','#D8E2DC','#FFE5D9','#ECE4DB','#B9FBC0'
+];
+const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const WDS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const STAGE_INFO=[
+  {label:'Монтаж',bg:'#ff9500',color:'#fff'},
+  {label:'Утверждение',bg:'#ffcc00',color:'#000'},
+  {label:'Готово',bg:'#34c759',color:'#fff'},
+];
+const FONTS=[
+  {f:'Climate Crisis',w:400},{f:'Russo One',w:400},{f:'Commissioner',w:700},
+  {f:'Hachi Maru Pop',w:400},{f:'Stick',w:400},{f:'Delta Gothic One',w:400},
+  {f:'Yuji Boku',w:400},{f:'Seymour One',w:400},{f:'Rubik Scribble',w:400},
+];
+const BG_IMGS=['bg1.JPG','bg2.JPG','bg3.JPG','bg4.JPG','bg5.JPG'];
+const DB_KEY='_db_v2';
+
+function db(){return JSON.parse(localStorage.getItem(DB_KEY)||'{"events":[],"flashes":[],"holidays":[],"rents":[],"deleted":[],"stickyNotes":{}}')}
+function sv(d){
+  localStorage.setItem(DB_KEY,JSON.stringify(d));
+  if(window._fbSave) window._fbSave(d);
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
+function p2(n){return String(n).padStart(2,'0')}
+function toDS(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+
+const TODAY=new Date();
+const TDS=toDS(TODAY);
+let calY=TODAY.getFullYear(),calM=TODAY.getMonth();
+let curTab='calendar';
+let curFid=null,editMode=false;
+let evEditId=null,evType='',evExtras=[];
+let nfState={name:'',size:'64',colorHex:'#374151',brand:''};
+let curNotesEvId=null;
+let rentEditId=null,rentSelectedTech=[];
+let selectedProjectColor='';
+let targetActionDate='';
+let activeFocusedCardId=null;
+let productionEventId=null;
+let currentProductionTab='shotlist';
+let currentActiveSceneId=null;
+let tempArchiveRatingScore=0;
+let temporaryArchiveTargetId=null;
+
+// ===== SHEET / PANEL / CONFIRM HELPERS =====
+function openSheet(id){document.getElementById(id).classList.add('open');}
+function closeSheet(id){document.getElementById(id).classList.remove('open');}
+function openPanel(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='panel-completed') renderCompletedList();
+}
+function closePanel(id){
+  document.getElementById(id).classList.remove('open');
+  if(id==='panel-flash'){curFid=null;renderFlashList();}
+}
+
+let _confirmCb=null;
+function showConfirm(title,msg,cb){
+  document.getElementById('conf-title').textContent=title;
+  document.getElementById('conf-msg').textContent=msg;
+  _confirmCb=cb;
+  document.getElementById('conf-ok').onclick=()=>{closeConfirm();if(_confirmCb)_confirmCb();};
+  document.getElementById('confirm').classList.add('open');
+}
+function closeConfirm(){document.getElementById('confirm').classList.remove('open');}
+
+// ===== FONT CYCLE =====
+let fontIdx=0;
+function cycleFont(){
+  const el=document.getElementById('app-name');if(!el)return;
+  el.classList.add('fading');
+  setTimeout(()=>{
+    fontIdx=(fontIdx+1)%FONTS.length;
+    const f=FONTS[fontIdx];
+    el.style.fontFamily=`'${f.f}',sans-serif`;
+    el.style.fontWeight=f.w;
+    el.classList.remove('fading');
+  },220);
+}
+setInterval(cycleFont,2000);
+
+// ===== BG SWITCHER =====
+let bgActive='a',bgLastIdx=-1;
+function randBg(){let i;do{i=Math.floor(Math.random()*BG_IMGS.length);}while(i===bgLastIdx&&BG_IMGS.length>1);bgLastIdx=i;return BG_IMGS[i];}
+function switchBg(){
+  const next=bgActive==='a'?'b':'a';
+  const inc=document.getElementById('bg-'+next);
+  const out=document.getElementById('bg-'+bgActive);
+  if(!inc||!out)return;
+  inc.style.backgroundImage=`url('${randBg()}')`;
+  inc.classList.add('visible');out.classList.remove('visible');
+  bgActive=next;
+}
+switchBg();
+
+// ===== MORNING CHECK =====
+function checkMorning(){
+  const data=db();const items=[];
+  const todayShoots=(data.events||[]).filter(e=>e.date===TDS&&(e.stage||0)<3);
+  todayShoots.forEach(e=>{items.push({type:'shoot',title:`Съёмка: ${e.clientName||e.type||'Без имени'}`,sub:e.time?`Время: ${e.time}`:'',cls:''});});
+  const todayDl=(data.events||[]).filter(e=>e.deadline===TDS&&(e.stage||0)<3);
+  todayDl.forEach(e=>{items.push({type:'deadline',title:`Дедлайн: ${e.clientName||e.type||'Без имени'}`,sub:'Сегодня последний день',cls:'warn'});});
+  const tomorrowStr=toDS(new Date(TODAY.getTime()+864e5));
+  const tomorrowDl=(data.events||[]).filter(e=>e.deadline===tomorrowStr&&(e.stage||0)<3);
+  tomorrowDl.forEach(e=>{items.push({type:'deadline',title:`Дедлайн завтра: ${e.clientName||e.type||'Без имени'}`,sub:'Остался 1 день',cls:'warn'});});
+  const hasActiveRent=(data.rents||[]).some(r=>r.date===TDS);
+  if(hasActiveRent)items.push({type:'info',title:'Запланирована аренда оборудования на сегодня',sub:'',cls:''});
+  const inWorkProjects=data.events.filter(e=>(e.stage||0)===1);
+  if(inWorkProjects.length)items.push({type:'info',title:`В работе проектов: ${inWorkProjects.length}`,sub:'',cls:''});
+  const todaySticky=(data.stickyNotes||{})[TDS];
+  if(todaySticky)items.push({type:'info',title:`Sticky Note: ${todaySticky}`,sub:'',cls:'warn'});
+  const isHoli=(data.holidays||[]).includes(TDS);
+  if(isHoli)items.push({type:'shoot',title:'ВЫХОДНОЙ ДЕНЬ',sub:'Отдыхаем',cls:'warn'});
+  if(!items.length)items.push({type:'info',title:'На сегодня съёмок и важных дедлайнов нет',sub:'',cls:'ok'});
+  const dayNames=['воскресенье','понедельник','вторник','среду','четверг','пятницу','субботу'];
+  document.getElementById('morning-date').textContent=TODAY.getDate()+' '+MONTHS[TODAY.getMonth()].toLowerCase()+', '+dayNames[TODAY.getDay()];
+  document.getElementById('morning-title').textContent=isHoli?'Выходной день':(todayShoots.length?`Сегодня ${todayShoots.length} съёмк${todayShoots.length===1?'а':'и'}`:'Сводка на сегодня');
+  document.getElementById('morning-items').innerHTML=items.map(it=>`<div class="morning-item ${it.cls}"><div class="morning-item-title">${it.title}</div>${it.sub?`<div class="morning-item-sub">${it.sub}</div>`:''}</div>`).join('');
+  document.getElementById('morning-overlay').classList.add('open');
+}
+function closeMorning(){document.getElementById('morning-overlay').classList.remove('open');}
+
+// ===== STATUS STRIP =====
+function renderStatusStrip(){
+  const strip=document.getElementById('status-strip');if(!strip)return;
+  const data=db();let html='';
+  const inWork=data.events.filter(e=>(e.stage||0)===1);
+  let loadColor='var(--green)';
+  if(inWork.length===1)loadColor='var(--yellow)';
+  if(inWork.length===2)loadColor='var(--orange)';
+  if(inWork.length>=3)loadColor='var(--red)';
+  html+=`<div class="load-indicator" style="background:${loadColor};" onclick="showLoadStatusTip()"></div>`;
+  const isHoli=(data.holidays||[]).includes(TDS);
+  if(isHoli)html+=`<div class="status-pill holiday-pill">Выходной</div>`;
+  const todayEvs=data.events.filter(e=>e.date===TDS&&(e.stage||0)<3);
+  const tomorrowStr=toDS(new Date(TODAY.getTime()+864e5));
+  const tomorrowEvs=data.events.filter(e=>e.date===tomorrowStr&&(e.stage||0)<3);
+  if(todayEvs.length)html+=`<div class="status-pill">Сегодня ${todayEvs.length} съёмк${todayEvs.length===1?'а':'и'}</div>`;
+  else if(tomorrowEvs.length)html+=`<div class="status-pill">Завтра съемка</div>`;
+  else html+=`<div class="status-pill">Съёмок нет</div>`;
+  if(inWork.length)html+=`<div class="status-pill">В работе: ${inWork.length} съёмк${inWork.length===1?'а':'и'}</div>`;
+  const rents=data.rents||[];
+  if(rents.some(r=>r.date===TDS))html+=`<div class="status-pill blue-pill">Аренда</div>`;
+  else if(rents.some(r=>r.date===tomorrowStr))html+=`<div class="status-pill blue-pill">Аренда (завтра)</div>`;
+  const todayDl=data.events.filter(e=>e.deadline===TDS&&(e.stage||0)<3);
+  const tomorrowDl=data.events.filter(e=>e.deadline===tomorrowStr&&(e.stage||0)<3);
+  if(todayDl.length)html+=`<div class="status-pill">Дедлайн сегодня</div>`;
+  if(tomorrowDl.length)html+=`<div class="status-pill">Дедлайн завтра</div>`;
+  strip.innerHTML=html;
+}
+function showLoadStatusTip(){
+  const data=db();const count=data.events.filter(e=>(e.stage||0)===1).length;
+  let s='Свободно / Нет съёмок в работе';
+  if(count===1)s='1 съёмка в работе';
+  if(count===2)s='2 съёмки в работе';
+  if(count>=3)s=`${count} съёмок в работе (высокая загруженность)`;
+  alert(`Загруженность: ${s}`);
+}
+
+// ===== STICKY NOTES BANNER =====
+function renderStickyNotesBanner(){
+  const data=db();const container=document.getElementById('sticky-notes-banner-area');if(!container)return;
+  const txt=(data.stickyNotes||{})[TDS];
+  container.innerHTML=txt?`<div class="sticky-note-banner"><span>📌 <b>Заметка дня:</b> ${txt}</span><button class="btn-delete-sticky" onclick="deleteStickyNoteForToday()">✕</button></div>`:'';
+}
+function deleteStickyNoteForToday(){
+  const data=db();if(data.stickyNotes&&data.stickyNotes[TDS]){delete data.stickyNotes[TDS];sv(data);buildGrid();}
+}
+
+// ===== TABS =====
+function switchTab(t){
+  const prev=curTab;curTab=t;
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['calendar','flash','shoots'][i]===t));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+t).classList.add('active');
+  ['cal','flash','shoots'].forEach(id=>{const fab=document.getElementById('fab-'+id);if(fab)fab.style.display=id===t?'flex':'none';});
+  if(prev!==t)switchBg();
+  renderStatusStrip();
+  if(t==='calendar'){renderCal();checkTodayBtn();renderStickyNotesBanner();}
+  if(t==='flash')renderFlashList();
+  if(t==='shoots')renderShootsList();
+  if(t!=='calendar')document.getElementById('btn-today').classList.remove('show');
+}
+
+function handleFabCalClick(){openActionSelect(TDS);}
+
+// ===== CALENDAR =====
+function calMove(dir){
+  if(window.calBusy)return;window.calBusy=true;
+  const g=document.getElementById('cal-grid');
+  g.classList.remove('settled');
+  g.classList.add(dir>0?'out-left':'out-right');
+  setTimeout(()=>{
+    calM+=dir;
+    if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}
+    document.getElementById('cal-label').textContent=MONTHS[calM]+' '+calY;
+    g.classList.remove('out-left','out-right','settled');
+    g.classList.add(dir>0?'in-left':'in-right');
+    buildGrid();
+    g.offsetHeight;
+    g.classList.remove('in-left','in-right');
+    g.classList.add('settled');
+    checkTodayBtn();
+    setTimeout(()=>{window.calBusy=false;},340);
+  },310);
+}
+function goToToday(){
+  calY=TODAY.getFullYear();calM=TODAY.getMonth();
+  document.getElementById('cal-label').textContent=MONTHS[calM]+' '+calY;
+  buildGrid();checkTodayBtn();
+}
+function checkTodayBtn(){
+  const on=calY===TODAY.getFullYear()&&calM===TODAY.getMonth();
+  document.getElementById('btn-today').classList.toggle('show',!on&&curTab==='calendar');
+}
+function renderCal(){
+  document.getElementById('cal-label').textContent=MONTHS[calM]+' '+calY;
+  document.getElementById('cal-wdays').innerHTML=WDS.map(w=>`<div class="cal-wd">${w}</div>`).join('');
+  buildGrid();
+  const el=document.getElementById('cal-wrap-el');
+  if(!el._sw){
+    el._sw=true;let sx=0,sy=0;
+    el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+    el.addEventListener('touchend',e=>{
+      const dx=e.changedTouches[0].clientX-sx;const dy=Math.abs(e.changedTouches[0].clientY-sy);
+      if(Math.abs(dx)>48&&dy<40)calMove(dx<0?1:-1);
+    },{passive:true});
+  }
+}
+
+function buildGrid(){
+  const g=document.getElementById('cal-grid');
+  g.innerHTML='';window.selCell=null;
+  const first=new Date(calY,calM,1);
+  let sd=first.getDay();sd=sd===0?6:sd-1;
+  const dim=new Date(calY,calM+1,0).getDate();
+  const data=db();
+  const shootsMap={},deadlinesMap={},borderMap={};
+  (data.events||[]).forEach(ev=>{
+    if(!ev.date)return;const st=ev.stage||0;if(st>=3)return;
+    shootsMap[ev.date]=ev.color||PROJECT_COLORS[0];
+    if(st===0)borderMap[ev.date]=ev.color||PROJECT_COLORS[0];
+    else if(st===1)borderMap[ev.date]='#ff9500';
+    else if(st===2)borderMap[ev.date]='#34c759';
+    if(ev.deadline){
+      deadlinesMap[ev.deadline]=ev.color||PROJECT_COLORS[0];
+      const diff=Math.round((new Date(TDS+'T00:00')-new Date(ev.deadline+'T00:00'))/864e5);
+      borderMap[ev.deadline]=diff>0?'#ff3b30':st===2?'#34c759':'rgba(0,0,0,0)';
+    }
+  });
+  const holidaySet=new Set(data.holidays||[]);
+  const rentSet=new Set((data.rents||[]).map(r=>r.date));
+  for(let i=0;i<sd;i++){const c=document.createElement('div');c.className='cal-cell empty';g.appendChild(c);}
+  for(let d=1;d<=dim;d++){
+    const ds=`${calY}-${p2(calM+1)}-${p2(d)}`;
+    const c=document.createElement('div');c.className='cal-cell';
+
+    const numSpan=document.createElement('span');
+    numSpan.className='cal-cell-number';
+    numSpan.textContent=d;
+    c.appendChild(numSpan);
+
+    if(ds===TDS)c.classList.add('today');
+    if(holidaySet.has(ds)&&ds!==TDS)c.classList.add('has-holiday');
+    if(rentSet.has(ds))c.style.setProperty('border-color','var(--blue)','important');
+    if(shootsMap[ds]||deadlinesMap[ds]){
+      const targetColor=shootsMap[ds]||deadlinesMap[ds];
+      const corner=document.createElement('div');
+      corner.className='cal-cell-corner';
+      corner.style.background=`linear-gradient(135deg, ${targetColor} 26%, transparent 28%)`;
+      c.appendChild(corner);
+    }
+    if(borderMap[ds]&&borderMap[ds]!=='rgba(0,0,0,0)'){
+      c.style.border=(borderMap[ds]==='#ff3b30')?`3px solid ${borderMap[ds]}`:`2px solid ${borderMap[ds]}`;
+    }
+    if(window._currentSelectedDayDate===ds)c.style.setProperty('box-shadow','0 0 0 2px #fff inset','important');
+    c.addEventListener('click',()=>handleCellTap(ds,c));
+    g.appendChild(c);
+  }
+  renderEvSection(data);
+  renderRentSortSection(data);
+  renderStatusStrip();
+  renderStickyNotesBanner();
+}
+
+function handleCellTap(ds,cell){
+  if(window._currentSelectedDayDate===ds){
+    window._currentSelectedDayDate=null;hideTip();buildGrid();openActionSelect(ds);
+  }else{
+    window._currentSelectedDayDate=ds;buildGrid();showTip(ds,cell);
+  }
+}
+function onDayAddBtn(){const ds=window._tapDs;hideTip();openActionSelect(ds);}
+
+function showTip(ds,cell){
+  hideTip();window._tapDs=ds;
+  const data=db();
+  const evs=data.events.filter(e=>e.date===ds&&(e.stage||0)<3);
+  const dls=data.events.filter(e=>e.deadline===ds&&(e.stage||0)<3);
+  const rnts=(data.rents||[]).filter(r=>r.date===ds);
+  const isHoli=(data.holidays||[]).includes(ds);
+  const tip=document.getElementById('day-tip');
+  let html='';
+  if(evs.length)html+=evs.map(e=>`${e.type?'['+e.type+'] ':''}${e.clientName||'—'}${e.time?' · '+e.time:''}`).join('<br>');
+  if(dls.length)html+=(html?'<br>':'')+'⏱ Дедлайн: '+dls.map(e=>e.clientName||'—').join(', ');
+  if(rnts.length)html+=(html?'<br>':'')+'📦 Аренда: '+rnts.map(r=>r.name||'—').join(', ');
+  if(isHoli)html+=(html?'<br>':'')+'❌ Выходной день';
+  if(!html)html='Нет записей. Нажми снова чтобы добавить';
+  tip.innerHTML=html;
+  tip.classList.add('shown');
+  const frame=document.querySelector('.app-frame');const fr=frame.getBoundingClientRect();const r=cell.getBoundingClientRect();
+  let top=r.bottom-fr.top+6,left=r.left-fr.left;
+  if(left+220>frame.offsetWidth)left=frame.offsetWidth-224;
+  if(top+80>frame.offsetHeight)top=r.top-fr.top-86;
+  tip.style.top=top+'px';tip.style.left=left+'px';
+  const addBtn=document.getElementById('day-add-btn');
+  document.getElementById('fab-cal').style.display='none';
+  addBtn.classList.add('show');
+}
+function hideTip(){
+  document.getElementById('day-tip').classList.remove('shown');
+  document.getElementById('day-add-btn').classList.remove('show');
+  if(curTab==='calendar')document.getElementById('fab-cal').style.display='flex';
+  window._tapDs=null;
+}
+
+// ===== ACTION SELECT =====
+function openActionSelect(date){
+  targetActionDate=date||toDS(TODAY);
+  openSheet('sh-action-select');
+}
+function selectActionType(type){
+  closeSheet('sh-action-select');
+  if(type==='shoot'){openAddEvent(targetActionDate);}
+  else if(type==='holiday'){
+    const data=db();if(!data.holidays)data.holidays=[];
+    if(!data.holidays.includes(targetActionDate))data.holidays.push(targetActionDate);
+    else data.holidays=data.holidays.filter(x=>x!==targetActionDate);
+    sv(data);buildGrid();
+  }else if(type==='rent'){openAddRent(targetActionDate);}
+  else if(type==='sticky'){
+    document.getElementById('sticky-note-text-input').value='';
+    openSheet('sh-sticky-note');
+  }
+}
+
+function saveStickyNote(){
+  const txt=document.getElementById('sticky-note-text-input').value.trim();
+  if(!txt)return;
+  const date=targetActionDate||TDS;
+  const data=db();
+  if(!data.stickyNotes)data.stickyNotes={};
+  data.stickyNotes[date]=txt;
+  sv(data);closeSheet('sh-sticky-note');buildGrid();
+}
+
+// ===== RENT =====
+function openAddRent(date){
+  rentEditId=null;rentSelectedTech=[];
+  document.getElementById('sh-rent-title').textContent='Новая аренда';
+  document.getElementById('rent-name').value='';
+  document.getElementById('rent-date').value=date||'';
+  renderRentTechChips();openSheet('sh-rent');
+}
+function openEditRent(id){
+  const data=db();const r=(data.rents||[]).find(x=>x.id===id);if(!r)return;
+  rentEditId=id;rentSelectedTech=[...(r.tech||[])];
+  document.getElementById('sh-rent-title').textContent='Редактировать аренду';
+  document.getElementById('rent-name').value=r.name||'';
+  document.getElementById('rent-date').value=r.date||'';
+  renderRentTechChips();openSheet('sh-rent');
+}
+function renderRentTechChips(){
+  document.getElementById('rent-tech-chips').innerHTML=TECH_LIST.map(t=>`<div class="chip ${rentSelectedTech.includes(t)?'on':''}" onclick="toggleRentTech('${t}',this)">${t}</div>`).join('');
+}
+function toggleRentTech(t,el){
+  if(rentSelectedTech.includes(t)){rentSelectedTech=rentSelectedTech.filter(x=>x!==t);el.classList.remove('on');}
+  else{rentSelectedTech.push(t);el.classList.add('on');}
+}
+function saveRent(){
+  const name=document.getElementById('rent-name').value.trim();const date=document.getElementById('rent-date').value;
+  if(!name||!date)return;
+  const data=db();if(!data.rents)data.rents=[];
+  const payload={name,date,tech:[...rentSelectedTech]};
+  if(rentEditId){const r=data.rents.find(x=>x.id===rentEditId);if(r)Object.assign(r,payload);}
+  else data.rents.push({id:uid(),...payload});
+  sv(data);closeSheet('sh-rent');buildGrid();
+}
+function deleteRent(id){
+  showConfirm('Удалить аренду?','Запись аренды будет удалена.',()=>{
+    const data=db();data.rents=(data.rents||[]).filter(x=>x.id!==id);sv(data);buildGrid();
+  });
+}
+function renderRentSortSection(data){
+  const el=document.getElementById('rent-sort-list');const sect=document.getElementById('rent-sort-section');
+  if(!el||!sect)return;
+  const rnts=data.rents||[];
+  if(!rnts.length){sect.style.display='none';return;}
+  sect.style.display='block';
+  const list=[...rnts].sort((a,b)=>a.date.localeCompare(b.date));
+  el.innerHTML=list.map(r=>`<div class="rent-card"><div class="rent-card-top"><div class="rent-card-info"><div class="rent-card-title">${r.name||'Без имени'}</div><div class="rent-card-meta">📅 ${r.date}</div></div></div><div class="rent-card-tech">${(r.tech||[]).map(t=>`<span class="tech-badge">${t}</span>`).join('')}</div><div class="rent-card-btns"><button class="btn-rent-edit" onclick="openEditRent('${r.id}')">✏️ Редактировать</button><button class="btn-rent-del" onclick="deleteRent('${r.id}')">×</button></div></div>`).join('');
+}
+
+// ===== EV SECTION =====
+function renderEvSection(data){
+  if(!data)data=db();
+  const root=document.getElementById('ev-section-container');if(!root)return;
+  const allEvs=data.events||[];
+  if(!allEvs.length){root.innerHTML='<div style="color:rgba(255,255,255,.35);font-size:13px;padding:14px 0 0">Нет съёмок</div>';return;}
+  const active=allEvs.filter(e=>(e.stage||0)<3);
+  const doneUnder=allEvs.filter(e=>(e.stage||0)===3);
+  const buildCards=(evs,isArchived)=>evs.map(ev=>{
+    const st=ev.stage||0;const typeStr=ev.type?`[${ev.type}] `:'';
+    let meta=ev.date||'—';if(ev.time)meta+=` · ${ev.time}`;
+    let workLbl=st===1?`<div class="ev-card-work-lbl">В работе</div>`:'';
+    let dlHtml='';
+    if(ev.deadline){
+      const diff=Math.round((new Date(TDS+'T00:00')-new Date(ev.deadline+'T00:00'))/864e5);
+      dlHtml=diff>0?`<div class="ev-card-deadline" style="color:var(--red)">⚠️ Просрочено ${diff} дн.</div>`:`<div class="ev-card-deadline" style="color:rgba(0,0,0,.4)">⏱ Дедлайн: ${ev.deadline}</div>`;
+    }
+    let stepsHtml='';
+    for(let i=1;i<=3;i++)stepsHtml+=`<div class="progress-step ${st>=i?'active-fill':''}" style="--shoot-color:${ev.color||'var(--orange)'}"></div>`;
+    const isFocused=activeFocusedCardId===ev.id?'focused-active':'';
+    return `<div class="ev-card ${isFocused}" data-id="${ev.id}" onclick="handleEvCardClickFocus('${ev.id}',event)">
+      <div class="ev-card-top">
+        <div class="ev-stage-dot" style="background:${isArchived?'#34c759':(ev.color||'#ff9500')}"></div>
+        <div class="ev-card-info">
+          <div class="ev-card-name" style="${isArchived?'text-decoration:line-through':''}">${typeStr}${ev.clientName||'Без имени'}</div>
+          <div class="ev-card-meta">${meta}</div>
+          <div class="progress-bar-container"><div class="progress-track">${stepsHtml}</div><span class="progress-bar-text">${st===1?'в работе':st===2?'утвержд.':st===3?'готово':'новое'}</span></div>
+          ${workLbl}${dlHtml}
+        </div>
+      </div>
+      <div class="ev-card-expanded-content">
+        <button class="btn-production-start" onclick="startProductionMode('${ev.id}',event)">🎬 Начать съёмку</button>
+        <div class="ev-card-btns">
+          ${st>0?`<button class="btn-back-stage" onclick="backStage('${ev.id}',event)">◀</button>`:''}
+          <button class="btn-stage" style="background:${STAGE_INFO[Math.min(st,2)].bg};color:${STAGE_INFO[Math.min(st,2)].color}" onclick="advStage('${ev.id}',event)">${STAGE_INFO[Math.min(st,2)].label}</button>
+          <button class="btn-edit-ev" onclick="openEditEvent('${ev.id}')">✏️</button>
+          <button class="btn-del-ev" onclick="openArchivationSheet('${ev.id}',event)">×</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  let html='';
+  if(active.length)html+=`<div class="ev-group-label">Активные съёмки</div>`+buildCards(active,false);
+  if(doneUnder.length)html+=`<div class="ev-group-label" style="color:rgba(255,255,255,.25)">Готово</div>`+buildCards(doneUnder,true);
+  root.innerHTML=html;
+}
+
+function handleEvCardClickFocus(id,event){
+  if(event.target.closest('button')||event.target.closest('a'))return;
+  const wrapper=document.getElementById('ev-section-container');
+  if(activeFocusedCardId===id){activeFocusedCardId=null;wrapper.classList.remove('has-active');}
+  else{activeFocusedCardId=id;wrapper.classList.add('has-active');}
+  renderEvSection();
+}
+function advStage(id,e){if(e)e.stopPropagation();const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;ev.stage=(ev.stage||0)+1;sv(data);buildGrid();}
+function backStage(id,e){if(e)e.stopPropagation();const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;ev.stage=Math.max(0,(ev.stage||0)-1);sv(data);buildGrid();}
+
+function openArchivationSheet(id,event){
+  if(event)event.stopPropagation();
+  temporaryArchiveTargetId=id;tempArchiveRatingScore=0;
+  document.getElementById('archive-earnings-input').value='';
+  resetArchiveStarsUI();openSheet('sh-archive-parameters');
+}
+function setArchiveRatingScore(score){
+  tempArchiveRatingScore=score;
+  document.querySelectorAll('#archive-rating-chips .star').forEach((s,idx)=>{s.style.color=idx<score?'var(--yellow)':'#333';});
+}
+function resetArchiveStarsUI(){document.querySelectorAll('#archive-rating-chips .star').forEach(s=>s.style.color='#333');}
+function confirmProjectArchivation(){
+  closeSheet('sh-archive-parameters');
+  const id=temporaryArchiveTargetId;const earnings=parseFloat(document.getElementById('archive-earnings-input').value)||0;
+  const data=db();const evIndex=data.events.findIndex(e=>e.id===id);
+  if(evIndex!==-1){
+    const ev=data.events[evIndex];if(!data.deleted)data.deleted=[];
+    ev.stage=4;ev.rating=tempArchiveRatingScore;ev.earnings=earnings;
+    data.deleted.push(ev);data.events.splice(evIndex,1);
+    sv(data);buildGrid();if(curTab==='shoots')renderShootsList();
+  }
+}
+
+// ===== ADD / EDIT EVENT =====
+function renderEvExtras(){
+  document.getElementById('ev-extras').innerHTML=evExtras.map((v,i)=>`<div class="extra-item"><input class="extra-inp" placeholder="Примечание..." value="${v.replace(/"/g,'&quot;')}" oninput="evExtras[${i}]=this.value"><button class="btn-rm-ex" onclick="rmEvExtra(${i})">×</button></div>`).join('');
+}
+function addEvExtra(){evExtras.push('');renderEvExtras();}
+function rmEvExtra(i){evExtras.splice(i,1);renderEvExtras();}
+
+function openAddEvent(date){
+  evEditId=null;evType='';evExtras=[];editMode=false;
+  selectedProjectColor=PROJECT_COLORS[0];
+  document.getElementById('sh-event-title').textContent='Новая съёмка';
+  ['ev-name','ev-time','ev-phone','ev-link','ev-deadline'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ev-date').value=date||'';
+  document.getElementById('ev-custom-type').style.display='none';
+  document.getElementById('ev-custom-type').value='';
+  renderEvTypeChips();renderEvExtras();renderProjectColorSelector();openSheet('sh-event');
+}
+function openEditEvent(id){
+  const data=db(),ev=data.events.find(e=>e.id===id);if(!ev)return;
+  evEditId=id;evExtras=[...(ev.extras||[])];editMode=true;
+  evType=EV_TYPES.includes(ev.type)?ev.type:ev.type?'Своё':'';
+  selectedProjectColor=ev.color||PROJECT_COLORS[0];
+  document.getElementById('sh-event-title').textContent='Редактировать съёмку';
+  ['ev-name','ev-date','ev-time','ev-deadline','ev-phone','ev-link'].forEach(fid=>{
+    const map={'ev-name':ev.clientName,'ev-date':ev.date,'ev-time':ev.time,'ev-deadline':ev.deadline,'ev-phone':ev.phone,'ev-link':ev.link};
+    document.getElementById(fid).value=map[fid]||'';
+  });
+  const ci=document.getElementById('ev-custom-type');
+  ci.style.display=evType==='Своё'?'block':'none';
+  ci.value=evType==='Своё'?(ev.type||''):'';
+  renderEvTypeChips();renderEvExtras();renderProjectColorSelector();openSheet('sh-event');
+}
+function renderEvTypeChips(){
+  document.getElementById('ev-type-chips').innerHTML=[...EV_TYPES,'Своё'].map(t=>`<div class="chip ${evType===t?'on':''}" onclick="setEvType(this,'${t}')">${t}</div>`).join('');
+}
+function setEvType(el,t){
+  evType=t;document.querySelectorAll('#ev-type-chips .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');
+  document.getElementById('ev-custom-type').style.display=t==='Своё'?'block':'none';
+}
+function renderProjectColorSelector(){
+  document.getElementById('ev-color-selector').innerHTML=PROJECT_COLORS.map(c=>`<div class="cswatch ${selectedProjectColor===c?'on':''}" style="background:${c}" onclick="setProjectColorHex('${c}',this)"></div>`).join('');
+}
+function setProjectColorHex(c,el){
+  selectedProjectColor=c;document.querySelectorAll('#ev-color-selector .cswatch').forEach(sw=>sw.classList.remove('on'));el.classList.add('on');
+}
+function saveEvent(){
+  const date=document.getElementById('ev-date').value;if(!date)return;
+  let type=evType==='Своё'?document.getElementById('ev-custom-type').value.trim():EV_TYPES.includes(evType)?evType:'';
+  const data=db();
+  const payload={type,clientName:document.getElementById('ev-name').value.trim(),date,time:document.getElementById('ev-time').value,deadline:document.getElementById('ev-deadline').value,phone:document.getElementById('ev-phone').value.trim(),link:document.getElementById('ev-link').value.trim(),extras:[...evExtras],color:selectedProjectColor};
+  if(editMode){const ev=data.events.find(e=>e.id===evEditId);if(ev)Object.assign(ev,payload);}
+  else data.events.push({id:uid(),stage:0,notes:[],...payload});
+  sv(data);closeSheet('sh-event');buildGrid();if(curTab==='shoots')renderShootsList();
+}
+
+// ===== SHOOTS LIST =====
+function renderShootsList(){
+  const data=db();
+  const list=document.getElementById('shoots-list');const empty=document.getElementById('shoots-empty');
+  const active=(data.events||[]).filter(e=>(e.stage||0)<3);
+  if(!active.length){list.innerHTML='';empty.style.display='block';}
+  else{
+    empty.style.display='none';
+    const evs=[...active].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    list.innerHTML=evs.map(ev=>{
+      const typeStr=ev.type?`[${ev.type}] `:'';
+      let meta=ev.date||'—';if(ev.time)meta+=` · ${ev.time}`;if(ev.deadline)meta+=` · ⏱ до ${ev.deadline}`;
+      const hasPreview=ev.mediaPreviewUrl?`background-image:url('${ev.mediaPreviewUrl}')`:`background:${ev.color||'#ff9500'}`;
+      return `<div class="src-card"><div class="src-preview-header" style="${hasPreview}"><div class="src-preview-mask"></div><div class="src-header-info-wrapper"><div class="src-info"><div class="src-name">${typeStr}${ev.clientName||'Без имени'}</div><div class="src-meta" style="color:rgba(255,255,255,0.7);">${meta}</div></div></div></div><div class="src-btns"><button class="btn-src-edit" onclick="openEditEvent('${ev.id}')">✏️ Ред.</button><button class="btn-src-open" onclick="openNotes('${ev.id}')">Перейти →</button></div></div>`;
+    }).join('');
+  }
+  renderCompletedList(data);
+}
+function renderCompletedList(data){
+  if(!data)data=db();
+  const completedList=data.deleted||[];
+  const list=document.getElementById('completed-list');const empty=document.getElementById('completed-empty');
+  if(!completedList.length){list.innerHTML='';if(empty)empty.style.display='block';document.getElementById('completed-financial-box').style.display='none';return;}
+  if(empty)empty.style.display='none';
+  document.getElementById('completed-financial-box').style.display='block';
+  let totalSum=0;
+  list.innerHTML=completedList.map(ev=>{
+    const typeStr=ev.type?`[${ev.type}] `:'';const score=ev.rating||0;const cash=ev.earnings||0;totalSum+=cash;
+    let starsStr='';for(let i=1;i<=5;i++)starsStr+=i<=score?'★':'☆';
+    return `<div class="done-card"><div class="done-card-info"><div class="done-card-name">${typeStr}${ev.clientName||'Без имени'}</div><div class="done-card-meta">${ev.date||'—'} · <span style="color:var(--yellow)">${starsStr}</span> · ${cash} ₽</div></div><div class="done-card-actions"><button class="btn-back-stage" onclick="restoreFromCompleted('${ev.id}')">Вернуть</button><button class="btn-done-del" onclick="permanentlyDelete('${ev.id}')">×</button></div></div>`;
+  }).join('');
+  document.getElementById('total-earnings-value').textContent=`${totalSum.toLocaleString()} ₽`;
+}
+function restoreFromCompleted(id){
+  const data=db();const index=(data.deleted||[]).findIndex(e=>e.id===id);
+  if(index!==-1){const ev=data.deleted[index];ev.stage=0;if(!data.events)data.events=[];data.events.push(ev);data.deleted.splice(index,1);sv(data);buildGrid();renderCompletedList(data);}
+}
+function permanentlyDelete(id){
+  showConfirm('Удалить навсегда?','Запись будет безвозвратно стёрта.',()=>{
+    const data=db();data.deleted=(data.deleted||[]).filter(e=>e.id!==id);sv(data);renderCompletedList(data);
+  });
+}
+
+// ===== NOTES PANEL =====
+function openNotes(evId){
+  curNotesEvId=evId;const data=db(),ev=data.events.find(e=>e.id===evId);if(!ev)return;
+  document.getElementById('notes-panel-title').textContent=ev.clientName||'Заметки';
+  document.getElementById('shoot-references-area').value=(ev.references||[]).join('\n');
+  const frame=document.getElementById('shoot-preview-img-frame');
+  if(ev.mediaPreviewUrl){frame.style.backgroundImage=`url('${ev.mediaPreviewUrl}')`;frame.style.display='block';}
+  else frame.style.display='none';
+  renderAudioTracksList(ev.audioTracks||[]);renderNoteBlocks(ev.notes||[]);openPanel('panel-notes');
+}
+function uploadShootPreviewFile(input){
+  if(input.files&&input.files[0]){
+    const reader=new FileReader();
+    reader.onload=function(e){
+      const b64=e.target.result;const data=db();const ev=data.events.find(x=>x.id===curNotesEvId);
+      if(ev){ev.mediaPreviewUrl=b64;sv(data);const frame=document.getElementById('shoot-preview-img-frame');frame.style.backgroundImage=`url('${b64}')`;frame.style.display='block';}
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+function saveShootReferences(){
+  const lines=document.getElementById('shoot-references-area').value.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  const data=db();const ev=data.events.find(e=>e.id===curNotesEvId);if(ev){ev.references=lines;sv(data);}
+}
+let mediaRecorder=null,audioChunks=[];
+async function toggleAudioRecording(){
+  const btn=document.getElementById('btn-audio-record-toggle');
+  if(!mediaRecorder||mediaRecorder.state==='inactive'){
+    audioChunks=[];
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder=new MediaRecorder(stream);
+    mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
+    mediaRecorder.onstop=()=>{
+      const blob=new Blob(audioChunks,{type:'audio/mp3'});const reader=new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend=()=>{
+        const b64=reader.result;const data=db();const ev=data.events.find(e=>e.id===curNotesEvId);
+        if(ev){if(!ev.audioTracks)ev.audioTracks=[];ev.audioTracks.push({id:uid(),dataUrl:b64,date:new Date().toLocaleTimeString()});sv(data);renderAudioTracksList(ev.audioTracks);}
+      };
+    };
+    mediaRecorder.start();btn.textContent='🛑 Остановить запись';btn.style.background='var(--red)';
+  }else{mediaRecorder.stop();btn.textContent='🎙 Начать запись';btn.style.background='var(--blue)';}
+}
+function renderAudioTracksList(tracks){
+  document.getElementById('shoot-audio-tracks-container').innerHTML=(tracks||[]).map(t=>`<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);padding:6px 10px;border-radius:10px;"><span style="font-size:12px;color:rgba(255,255,255,0.5)">Запись ${t.date}</span><audio src="${t.dataUrl}" controls style="height:28px;flex:1;"></audio></div>`).join('');
+}
+function renderNoteBlocks(notes){
+  document.getElementById('notes-blocks-container').innerHTML=(notes||[]).map((n,i)=>`<div class="note-block"><button class="btn-rm-note" onclick="rmNoteBlock(${i})">×</button><textarea class="note-textarea" placeholder="Введите заметку..." oninput="autoResize(this);saveNoteBlock(${i},this.value)">${escHtml(n||'')}</textarea></div>`).join('');
+  document.querySelectorAll('.note-textarea').forEach(autoResize);
+}
+function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function addNoteBlock(){const data=db(),ev=data.events.find(e=>e.id===curNotesEvId);if(!ev)return;if(!ev.notes)ev.notes=[];ev.notes.push('');sv(data);renderNoteBlocks(ev.notes);}
+function saveNoteBlock(i,val){const data=db(),ev=data.events.find(e=>e.id===curNotesEvId);if(!ev)return;if(!ev.notes)ev.notes=[];ev.notes[i]=val;sv(data);}
+function rmNoteBlock(i){const data=db(),ev=data.events.find(e=>e.id===curNotesEvId);if(!ev)return;if(!ev.notes)ev.notes=[];ev.notes.splice(i,1);sv(data);renderNoteBlocks(ev.notes);}
+
+// ===== PRODUCTION MODE =====
+function startProductionMode(id,event){
+  if(event)event.stopPropagation();
+  productionEventId=id;const data=db();const ev=data.events.find(e=>e.id===id);if(!ev)return;
+  document.getElementById('production-panel-title').textContent=ev.clientName||'Режим площадки';
+  document.getElementById('prod-quick-notes-textarea').value=ev.productionQuickNotes||'';
+  switchProductionTab('shotlist');renderProductionScenes();initProductionTechPhaseStructure();openPanel('panel-production');
+}
+function closeProductionPanel(){closePanel('panel-production');buildGrid();}
+function switchProductionTab(tabName){
+  currentProductionTab=tabName;
+  document.querySelectorAll('.prod-nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.prod-tab-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`p-nav-${tabName}`).classList.add('active');
+  document.getElementById(`prod-pane-${tabName}`).classList.add('active');
+}
+function saveProductionQuickNotes(){
+  const txt=document.getElementById('prod-quick-notes-textarea').value;
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);if(ev){ev.productionQuickNotes=txt;sv(data);}
+}
+function renderProductionScenes(){
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);if(!ev)return;
+  const root=document.getElementById('production-scenes-root');
+  root.innerHTML=(ev.scenes||[]).map(sc=>{
+    const tasksHtml=(sc.tasks||[]).map(t=>`<div style="display:flex;align-items:center;gap:10px;margin-top:8px;"><input type="checkbox" style="transform:scale(1.2);" ${t.done?'checked':''} onclick="toggleProductionSceneTaskStatus('${sc.id}','${t.id}')"><span style="font-size:14px;${t.done?'text-decoration:line-through;opacity:0.5;':''}">${t.name}</span></div>`).join('');
+    return `<div class="scene-block-item"><div style="display:flex;justify-content:space-between;align-items:center;width:100%;"><div class="scene-title-header" style="flex:1;">${sc.name}</div><button class="btn-add-r" style="background:var(--blue);color:#fff;border:none;width:30px;height:30px;border-radius:9px;" onclick="openCreateSceneTaskSheet('${sc.id}')">+</button></div><div>${tasksHtml}</div></div>`;
+  }).join('');
+}
+function createProductionScene(){
+  const name=prompt('Название сцены / локации:');if(!name)return;
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);
+  if(ev){if(!ev.scenes)ev.scenes=[];ev.scenes.push({id:uid(),name,tasks:[]});sv(data);renderProductionScenes();}
+}
+function openCreateSceneTaskSheet(sceneId){currentActiveSceneId=sceneId;document.getElementById('scene-task-name-input').value='';openSheet('sh-scene-task');}
+function saveProductionSceneTask(){
+  closeSheet('sh-scene-task');const name=document.getElementById('scene-task-name-input').value.trim();if(!name)return;
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);
+  if(ev){const scene=ev.scenes.find(s=>s.id===currentActiveSceneId);if(scene){if(!scene.tasks)scene.tasks=[];scene.tasks.push({id:uid(),name,done:false});sv(data);renderProductionScenes();}}
+}
+function toggleProductionSceneTaskStatus(sceneId,taskId){
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);
+  if(ev){const scene=ev.scenes.find(s=>s.id===sceneId);if(scene){const task=scene.tasks.find(t=>t.id===taskId);if(task){task.done=!task.done;sv(data);renderProductionScenes();}}}
+}
+function initProductionTechPhaseStructure(){
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);if(!ev)return;
+  if(ev.techPhaseStatus==='field'){
+    document.getElementById('prod-tech-setup-phase').style.display='none';
+    document.getElementById('prod-tech-field-phase').style.display='block';
+    renderProductionTechFieldChecklist();
+  }else{
+    document.getElementById('prod-tech-setup-phase').style.display='block';
+    document.getElementById('prod-tech-field-phase').style.display='none';
+    if(!ev.selectedTechSetupList)ev.selectedTechSetupList=[];
+    renderProductionTechSetupChips();
+  }
+}
+function renderProductionTechSetupChips(){
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);if(!ev)return;
+  const chosen=ev.selectedTechSetupList||[];
+  document.getElementById('prod-tech-selector-chips').innerHTML=TECH_LIST.map(t=>`<div class="chip ${chosen.includes(t)?'on':''}" onclick="toggleProductionTechSetupValue('${t}',this)">${t}</div>`).join('');
+}
+function toggleProductionTechSetupValue(t,el){
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);if(!ev)return;
+  if(!ev.selectedTechSetupList)ev.selectedTechSetupList=[];
+  if(ev.selectedTechSetupList.includes(t)){ev.selectedTechSetupList=ev.selectedTechSetupList.filter(x=>x!==t);el.classList.remove('on');}
+  else{ev.selectedTechSetupList.push(t);el.classList.add('on');}
+  sv(data);
+}
+function advanceProductionTechPhase(){
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);if(!ev)return;
+  ev.techPhaseStatus='field';ev.fieldTechChecklistState=(ev.selectedTechSetupList||[]).map(t=>({name:t,checked:false}));sv(data);initProductionTechPhaseStructure();
+}
+function renderProductionTechFieldChecklist(){
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);if(!ev)return;
+  const list=ev.fieldTechChecklistState||[];
+  document.getElementById('prod-tech-field-checklist').innerHTML=list.map((item,idx)=>`<label style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;cursor:pointer;"><input type="checkbox" style="transform:scale(1.2);" ${item.checked?'checked':''} onclick="toggleProductionTechFieldItemStatus(${idx})"><span style="font-size:15px;${item.checked?'text-decoration:line-through;opacity:0.5':''}"> ${item.name}</span></label>`).join('');
+}
+function toggleProductionTechFieldItemStatus(index){
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);if(!ev)return;
+  if(ev.fieldTechChecklistState&&ev.fieldTechChecklistState[index]){ev.fieldTechChecklistState[index].checked=!ev.fieldTechChecklistState[index].checked;sv(data);renderProductionTechFieldChecklist();}
+}
+function triggerProductionTechReset(mode){
+  const data=db();const ev=data.events.find(e=>e.id===productionEventId);if(!ev)return;
+  if(mode==='move'){if(ev.fieldTechChecklistState)ev.fieldTechChecklistState.forEach(i=>i.checked=false);}
+  else{ev.techPhaseStatus='setup';ev.selectedTechSetupList=[];ev.fieldTechChecklistState=[];}
+  sv(data);initProductionTechPhaseStructure();
+}
+
+// ===== FLASH =====
+function fabFlashClick(){
+  editMode=false;nfState={name:'',size:'64',colorHex:'#374151',brand:''};
+  document.getElementById('sh-flash-title').textContent='Новая флешка';
+  document.getElementById('nf-btn').textContent='Добавить';
+  document.getElementById('nf-name').value='';
+  renderNFForm();openSheet('sh-flash');
+}
+function openEditFlash(){
+  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
+  editMode=true;nfState={name:f.name||'',size:f.size||'64',colorHex:f.colorHex||'#374151',brand:f.brand||''};
+  document.getElementById('sh-flash-title').textContent='Параметры флешки';
+  document.getElementById('nf-btn').textContent='Сохранить';
+  document.getElementById('nf-name').value=nfState.name;
+  renderNFForm();openSheet('sh-flash');
+}
+function renderNFForm(){
+  document.getElementById('nf-size').innerHTML=SIZES.map(s=>`<div class="chip ${nfState.size===s?'on':''}" onclick="setNF('size','${s}',this,'nf-size')">${s} GB</div>`).join('');
+  document.getElementById('nf-color').innerHTML=COLORS.map(c=>`<div class="cswatch ${nfState.colorHex===c.hex?'on':''}" style="background:${c.hex}" title="${c.name}" onclick="setNFColor('${c.hex}',this)"></div>`).join('');
+  document.getElementById('nf-brand').innerHTML=BRANDS.map(b=>`<div class="chip ${nfState.brand===b?'on':''}" onclick="setNF('brand','${b}',this,'nf-brand')">${b}</div>`).join('');
+}
+function setNF(k,v,el,gid){nfState[k]=v;document.querySelectorAll('#'+gid+' .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+function setNFColor(hex,el){nfState.colorHex=hex;document.querySelectorAll('#nf-color .cswatch').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+function saveFlash(){
+  nfState.name=document.getElementById('nf-name').value.trim();
+  const data=db();if(!data.flashes)data.flashes=[];
+  if(editMode){const f=data.flashes.find(x=>x.id===curFid);if(f)Object.assign(f,{name:nfState.name,size:nfState.size,colorHex:nfState.colorHex,brand:nfState.brand});}
+  else data.flashes.push({id:uid(),name:nfState.name||'Флешка',size:nfState.size,colorHex:nfState.colorHex,brand:nfState.brand,marker:'green',shootings:[]});
+  sv(data);closeSheet('sh-flash');if(editMode)renderFlashPanel();renderFlashList();
+}
+function flashSVG(color,size=32){
+  const c=color||'#374151';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none"><path d="M18 8H82Q92 8 92 18V82Q92 92 82 92H18Q8 92 8 82V30L18 18Z" fill="${c}"/><rect x="26" y="14" width="10" height="22" rx="3" fill="white"/><rect x="40" y="14" width="10" height="22" rx="3" fill="white"/><rect x="54" y="14" width="10" height="22" rx="3" fill="white"/><rect x="68" y="14" width="10" height="22" rx="3" fill="white"/></svg>`;
+}
+function renderFlashList(){
+  const data=db();const list=document.getElementById('flash-list'),empty=document.getElementById('flash-empty');
+  if(!data.flashes||!data.flashes.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=data.flashes.map(f=>{
+    const m=f.marker||'green',c=f.colorHex||'#374151';
+    return `<div class="flash-card" onclick="openFlashPanel('${f.id}')"><div class="flash-icon-box">${flashSVG(c,36)}</div><div class="flash-info"><div class="flash-name">${f.name||'Флешка'}</div><div class="flash-meta">${f.size?f.size+' GB':''}${f.brand?' · '+f.brand:''}</div></div><div class="marker-dot ${m==='green'?'mg':'mr'}"></div></div>`;
+  }).join('');
+}
+function openFlashPanel(id){curFid=id;renderFlashPanel();openPanel('panel-flash');}
+function renderFlashPanel(){
+  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
+  const m=f.marker||'green',c=f.colorHex||'#374151';
+  document.getElementById('pd-title-txt').textContent=f.name||'Флешка';
+  document.getElementById('pd-hero').innerHTML=`<div class="hero-icon">${flashSVG(c,46)}</div><div class="hero-info"><div class="hero-name">${f.name||'Флешка'}</div><div class="hero-meta">${f.size?f.size+' GB':''}${f.brand?' · '+f.brand:''}</div><div class="hero-status"><div class="marker-dot ${m==='green'?'mg':'mr'}"></div><span class="status-lbl ${m==='green'?'st-green':'st-red'}">${m==='green'?'Можно форматировать':'Нельзя форматировать'}</span></div></div>`;
+  renderPanelShoots(f);
+}
+function renderPanelShoots(f){
+  const el=document.getElementById('pd-shoots');
+  if(!(f.shootings||[]).length){el.innerHTML='<div class="no-items">Нет съёмок на флешке</div>';return;}
+  el.innerHTML=f.shootings.map(s=>{
+    const hd=!!s.hardDone,bd=!!s.backupDone;
+    return `<div class="shoot-item"><button class="btn-rm" onclick="rmShoot('${s.id}')">×</button><div class="si-name">${s.name||'Без названия'}</div><div class="si-meta">📅 ${s.date||'—'} &nbsp;⏱ ${s.deadline||'—'}</div><div class="shoot-checks"><div class="chk-row" onclick="toggleShootCheck('${s.id}','hardDone')"><div class="chk-box ${hd?'checked':''}"></div><div class="chk-lbl">Загрузил на хард</div></div><div class="chk-row" onclick="toggleShootCheck('${s.id}','backupDone')"><div class="chk-box ${bd?'checked':''}"></div><div class="chk-lbl">Бэкап на облако</div></div></div></div>`;
+  }).join('');
+}
+function toggleShootCheck(sid,field){
+  const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;
+  const s=(f.shootings||[]).find(x=>x.id===sid);if(!s)return;
+  s[field]=!s[field];sv(data);renderPanelShoots(f);
+}
+function openAddToFlash(){
+  const data=db(),evs=data.events||[];const el=document.getElementById('add-to-flash-list');
+  el.innerHTML=evs.length?evs.map(ev=>`<div class="pull-item"><div><div class="pull-item-name">${ev.type?'['+ev.type+'] ':''}${ev.clientName||'Без имени'}</div><div class="pull-item-meta">📅 ${ev.date||'—'}${ev.time?' · '+ev.time:''}</div></div><div class="pull-deadline-row"><button class="btn-pull-add" onclick="addEvToFlash('${ev.id}')">Добавить</button></div></div>`).join(''):'<div class="no-items">Нет съёмок в календаре</div>';
+  openSheet('sh-add-to-flash');
+}
+function addEvToFlash(evId){
+  const data=db(),ev=data.events.find(e=>e.id===evId),f=data.flashes.find(x=>x.id===curFid);if(!ev||!f)return;
+  if(!f.shootings)f.shootings=[];
+  f.shootings.push({id:uid(),name:(ev.type?'['+ev.type+'] ':'')+(ev.clientName||'Без имени'),date:ev.date||'',deadline:ev.deadline||'',calEvId:evId});
+  updMarker(f);sv(data);closeSheet('sh-add-to-flash');renderFlashPanel();
+}
+function rmShoot(sid){const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;f.shootings=(f.shootings||[]).filter(s=>s.id!==sid);updMarker(f);sv(data);renderFlashPanel();}
+function doErase(){showConfirm('Стереть съёмки?','Все съёмки с флешки будут удалены.',()=>{const data=db(),f=data.flashes.find(x=>x.id===curFid);if(!f)return;f.shootings=[];updMarker(f);sv(data);renderFlashPanel();});}
+function doDeleteFlash(){showConfirm('Удалить флешку?','Карточка будет удалена.',()=>{const data=db();data.flashes=data.flashes.filter(f=>f.id!==curFid);sv(data);closePanel('panel-flash');});}
+function updMarker(f){f.marker=(f.shootings&&f.shootings.length)?'red':'green';}
+
+// ===== INIT =====
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+switchTab('calendar');
+checkMorning();
+
+window.buildGrid=buildGrid;
+window.renderFlashList=renderFlashList;
+window.renderShootsList=renderShootsList;
+</script>
+</body>
+</html>
